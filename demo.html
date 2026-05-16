@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>川麻小白助手 Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .tile-selected {
+      transform: translateY(-8px) scale(1.08) !important;
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 0 2px #93c5fd, 0 4px 12px rgba(96, 165, 250, 0.4) !important;
+      z-index: 10;
+    }
+    .tile-disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+    .modal-overlay { animation: fadeIn 0.15s ease; }
+    .modal-box { animation: slideUp 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(30px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    .hidden-tile-inner {
+      background: linear-gradient(135deg, #0f766e 0%, #115e59 60%, #0d4f4a 100%);
+      border: 1px solid #0f766e;
+      border-radius: 3px;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(37, 99, 235, 0.5); }
+      50% { box-shadow: 0 0 22px rgba(59, 130, 246, 0.8), 0 0 40px rgba(37, 99, 235, 0.3); }
+    }
+    .btn-confirm { animation: pulse-glow 2s infinite; }
+    @keyframes blink-border {
+      0%, 100% { border-color: #14b8a6; }
+      50% { border-color: #5eead4; }
+    }
+    .badge-phase { animation: blink-border 2s infinite; }
+    .table-inner-border {
+      background: linear-gradient(135deg, rgba(20,184,166,0.06) 0%, rgba(15,27,41,0) 50%, rgba(20,184,166,0.04) 100%);
+    }
+    /* 出牌区 hover 高亮 */
+    .discard-zone { transition: background 0.15s; }
+    .discard-zone:hover { background: rgba(255,255,255,0.06); }
+  </style>
+</head>
+<body class="bg-[#020617] min-h-screen flex flex-col items-center py-4 px-2">
+
+  <div id="app" class="w-full max-w-[420px] flex flex-col gap-0 font-sans text-gray-200 relative">
+
+    <!-- 顶部状态栏 -->
+    <header class="bg-[#0b1220] border border-slate-700/60 rounded-t-2xl px-4 py-2.5 flex items-center justify-between shadow-lg sticky top-0 z-30">
+      <div class="flex flex-col gap-0.5">
+        <h1 class="text-sm font-black text-gray-100 tracking-wide">川麻小白助手</h1>
+        <div class="flex bg-slate-800 rounded-md p-0.5 w-fit">
+          <button id="mode-new" onclick="switchMode('new')" class="text-[10px] px-2 py-0.5 rounded transition text-slate-500 hover:text-slate-300">新对局</button>
+          <button id="mode-mid" onclick="switchMode('mid')" class="text-[10px] px-2 py-0.5 rounded transition bg-slate-700 text-slate-200 font-bold">中途录入</button>
+        </div>
+        <p class="text-[10px] text-slate-400" id="mode-subtitle">血战到底 · 中途录入</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="phase-badge" class="badge-phase text-[10px] font-bold border rounded px-2 py-0.5 text-teal-400 border-teal-700 bg-teal-950/60">对局中</span>
+        <!-- 拍照按钮 -->
+        <button onclick="openCameraInput()" class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-700 transition border border-slate-700" title="拍照录入">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+        <!-- 设置按钮 -->
+        <button onclick="alert('设置功能开发中')" class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-700 transition border border-slate-700" title="设置">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 牌桌区域 -->
+    <div class="bg-[#0b1220] border-x border-slate-700/60 px-2 pt-4 pb-0 flex flex-col items-center shadow-inner">
+      <!-- 牌桌：纵向拉长，给左右出牌区更多呼吸空间 -->
+      <div id="table-board" class="relative w-full aspect-[3/4] max-w-[400px] bg-[#0f1b29] rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden p-2">
+        <div class="absolute inset-3 border border-slate-700/25 rounded-xl pointer-events-none table-inner-border"></div>
+
+        <!-- 对家 (上方) -->
+        <div class="absolute top-[5%] left-0 right-0 flex flex-col items-center gap-1 z-10">
+          <div class="relative flex gap-[2px]" id="across-hand">
+            <div class="absolute top-1/2 -translate-y-1/2 left-full ml-3 z-20">
+              <button onclick="openActionModal('across')" class="relative w-10 h-10 bg-[#1e293b] rounded-lg shadow-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
+                <span class="text-[11px] font-bold text-slate-200">对家</span>
+                <span id="badge-across" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
+              </button>
+            </div>
+          </div>
+          <div id="across-melds" class="flex gap-1.5"></div>
+        </div>
+
+        <!-- 上家 (左方) -->
+        <div class="absolute left-[5%] top-0 bottom-0 flex flex-row items-center gap-1 z-10">
+          <div class="relative flex flex-col gap-[2px]" id="left-hand">
+            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20">
+              <button onclick="openActionModal('left')" class="relative w-10 h-10 bg-[#1e293b] rounded-lg shadow-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
+                <span class="text-[11px] font-bold text-slate-200">上家</span>
+                <span id="badge-left" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
+              </button>
+            </div>
+          </div>
+          <div id="left-melds" class="flex flex-col gap-1"></div>
+        </div>
+
+        <!-- 下家 (右方) -->
+        <div class="absolute right-[5%] top-0 bottom-0 flex flex-row-reverse items-center gap-1 z-10">
+          <div class="relative flex flex-col gap-[2px]" id="right-hand">
+            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20">
+              <button onclick="openActionModal('right')" class="relative w-10 h-10 bg-[#1e293b] rounded-lg shadow-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
+                <span class="text-[11px] font-bold text-slate-200">下家</span>
+                <span id="badge-right" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
+              </button>
+            </div>
+          </div>
+          <div id="right-melds" class="flex flex-col gap-1"></div>
+        </div>
+
+        <!-- 中心出牌河区域：四块长方形拼成竖长矩形 -->
+        <div class="absolute inset-[22%] rounded-lg border border-slate-700/40 bg-slate-900/50 shadow-inner z-5 overflow-hidden">
+          <!-- 庄家标识 -->
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-dashed border-teal-500/50 flex items-center justify-center text-[9px] text-teal-500/80 bg-[#0f1b29]/90 z-10 shadow-md pointer-events-none">庄:我</div>
+
+          <!-- 四家出牌区：四块长方形拼成竖长矩形，上下各 28%（3排），左右各 44% -->
+          <div id="discard-across" onclick="openDiscardModal('across')"
+               class="discard-zone absolute top-0 left-0 right-0 h-[28%] flex flex-row-reverse flex-wrap justify-center content-start gap-[2px] cursor-pointer pt-0.5 px-1 border-b border-slate-700/30"
+               ></div>
+          <div id="discard-me" onclick="openDiscardModal('me')"
+               class="discard-zone absolute bottom-0 left-0 right-0 h-[28%] flex flex-row flex-wrap justify-center content-end gap-[2px] cursor-pointer pb-0.5 px-1 border-t border-slate-700/30"
+               ></div>
+          <div id="discard-left" onclick="openDiscardModal('left')"
+               class="discard-zone absolute top-[28%] bottom-[28%] left-0 w-1/2 flex flex-col flex-wrap justify-center content-start gap-[2px] cursor-pointer pl-0.5 border-r border-slate-700/30"
+               ></div>
+          <div id="discard-right" onclick="openDiscardModal('right')"
+               class="discard-zone absolute top-[28%] bottom-[28%] right-0 w-1/2 flex flex-col-reverse flex-wrap justify-center content-end gap-[2px] cursor-pointer pr-0.5 border-l border-slate-700/30"
+               ></div>
+        </div>
+
+        <!-- 我方碰杠区 (桌内底部) -->
+        <div id="me-melds" class="absolute bottom-[13%] left-0 right-0 flex justify-center gap-2 z-10"></div>
+      </div>
+
+      <!-- 我方手牌底座 -->
+      <div class="w-full max-w-[400px] bg-slate-800/95 rounded-b-xl rounded-t-lg border border-slate-600 shadow-2xl -mt-8 relative z-20 p-2">
+        <div class="flex justify-between items-center mb-2 px-1">
+          <div class="flex items-center gap-2">
+            <button onclick="openActionModal('me')" class="relative w-9 h-9 bg-[#1e293b] rounded-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
+              <span class="text-[10px] font-bold text-slate-200">我</span>
+              <span id="badge-me" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
+            </button>
+            <span class="text-xs font-bold text-slate-300">我方手牌</span>
+            <span class="text-[10px] text-slate-500" id="hand-count-label">(10张)</span>
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="undoLast()" class="text-[10px] flex items-center gap-1 text-slate-400 bg-slate-900 px-2 py-1.5 rounded hover:bg-slate-700 transition border border-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.9"/></svg>
+              撤销
+            </button>
+            <button onclick="openHandEditor()" class="text-[10px] text-teal-400 bg-teal-950/60 px-2 py-1.5 rounded hover:bg-teal-900/60 transition border border-teal-800">
+              录入手牌
+            </button>
+          </div>
+        </div>
+        <div id="my-hand-display" class="flex gap-[3px] overflow-x-auto no-scrollbar pt-3 pb-1 min-h-[60px] items-end"></div>
+        <div id="confirm-area" class="hidden mt-2 flex justify-center">
+          <button id="confirm-btn" onclick="confirmDiscard()" class="btn-confirm bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-6 py-2 rounded-full border-2 border-blue-400 transition w-full">确认出牌：—</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作区 -->
+    <div class="bg-[#0b1220] border-x border-slate-700/60 px-3 pt-4 pb-3 flex flex-col gap-3">
+      <!-- 换三张面板 -->
+      <div id="panel-swap" class="bg-[#0f1b29] rounded-xl border border-slate-700/60 p-3 hidden">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs font-bold text-amber-400">换三张</span>
+          <span id="swap-hint" class="text-[10px] text-slate-500">选3张同花色换出，再录入换入</span>
+        </div>
+        <div class="flex gap-2 items-center mb-2">
+          <span class="text-[10px] text-slate-400 w-10 flex-shrink-0">换出：</span>
+          <div id="swap-out-display" class="flex gap-1 flex-1 min-h-[36px] items-center bg-slate-900/60 rounded px-2 border border-slate-700"><span class="text-[10px] text-slate-600">从手牌中点选</span></div>
+          <button onclick="clearSwapOut()" class="text-[10px] text-slate-500 hover:text-slate-300 px-1">清除</button>
+        </div>
+        <div class="flex gap-2 items-center mb-2">
+          <span class="text-[10px] text-slate-400 w-10 flex-shrink-0">方向：</span>
+          <div class="flex gap-1.5">
+            <button onclick="setSwapDir('left')" id="dir-left" class="swap-dir-btn text-[10px] px-2 py-1 rounded border border-slate-700 bg-slate-800 text-slate-400 hover:border-amber-500 hover:text-amber-400 transition">上家</button>
+            <button onclick="setSwapDir('right')" id="dir-right" class="swap-dir-btn text-[10px] px-2 py-1 rounded border border-slate-700 bg-slate-800 text-slate-400 hover:border-amber-500 hover:text-amber-400 transition">下家</button>
+            <button onclick="setSwapDir('across')" id="dir-across" class="swap-dir-btn text-[10px] px-2 py-1 rounded border border-slate-700 bg-slate-800 text-slate-400 hover:border-amber-500 hover:text-amber-400 transition">对家</button>
+          </div>
+        </div>
+        <div class="flex gap-2 items-center">
+          <span class="text-[10px] text-slate-400 w-10 flex-shrink-0">换入：</span>
+          <div id="swap-in-display" class="flex gap-1 flex-1 min-h-[36px] items-center bg-slate-900/60 rounded px-2 border border-slate-700"><span class="text-[10px] text-slate-600">点击选择换入3张</span></div>
+          <button onclick="openTilePicker('swapIn', 3)" class="text-[10px] text-teal-400 bg-teal-950/60 px-2 py-1 rounded border border-teal-800 hover:bg-teal-900/60 transition">选牌</button>
+        </div>
+        <button onclick="confirmSwap()" class="mt-2.5 w-full text-xs font-bold bg-amber-600/80 hover:bg-amber-500 text-white py-2 rounded-lg border border-amber-500 transition">确认换三张</button>
+      </div>
+
+      <!-- AI 分析按钮 -->
+      <button onclick="requestAI()" id="ai-btn" class="w-full py-3 rounded-xl font-black text-sm text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 border border-teal-500/50 shadow-lg transition">⚡ 请求 AI 分析出牌建议</button>
+    </div>
+
+    <!-- AI 建议展示区 -->
+    <div id="advice-section" class="bg-[#0b1220] border border-slate-700/60 rounded-b-2xl px-3 pt-3 pb-5 flex flex-col gap-3">
+      <div id="warning-box" class="bg-orange-950/40 border border-orange-900/60 rounded-xl p-3 shadow-sm hidden">
+        <div class="flex items-start gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="text-orange-500 shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div id="warning-content" class="flex flex-col gap-1.5"></div>
+        </div>
+      </div>
+      <div id="advice-card" class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg hidden">
+        <div class="px-4 py-3 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-1 mb-1 text-teal-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#2dd4bf" stroke="#2dd4bf" stroke-width="1"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span class="text-[10px] font-bold uppercase tracking-wider">AI 实时决策</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="advice-primary" class="text-2xl font-black text-white">—</span>
+              <span id="advice-confidence" class="text-[10px] font-bold bg-teal-900/50 text-teal-300 border border-teal-800 px-1.5 py-0.5 rounded-sm">把握极高</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5 w-24">
+            <div><div class="flex justify-between mb-0.5"><span class="text-[10px] text-slate-400">进攻收益</span><span id="benefit-score" class="text-[10px] font-bold text-red-400">—</span></div><div class="w-full bg-slate-800 rounded-full h-1.5"><div id="benefit-bar" class="bg-gradient-to-r from-red-600 to-red-400 h-1.5 rounded-full transition-all duration-700" style="width:0%"></div></div></div>
+            <div><div class="flex justify-between mb-0.5"><span class="text-[10px] text-slate-400">防守风险</span><span id="risk-score" class="text-[10px] font-bold text-blue-400">—</span></div><div class="w-full bg-slate-800 rounded-full h-1.5"><div id="risk-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-1.5 rounded-full transition-all duration-700" style="width:0%"></div></div></div>
+          </div>
+        </div>
+        <div class="p-4">
+          <h3 class="text-[11px] font-bold text-slate-400 mb-3 flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            决策逻辑拆解
+          </h3>
+          <div id="reasons-list" class="flex flex-col gap-3 mb-4"></div>
+          <div class="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50">
+            <div class="text-[10px] text-slate-500 mb-2 font-medium">备选降级方案</div>
+            <div id="alternatives-list" class="flex flex-col gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+      <div id="advice-placeholder" class="flex flex-col items-center justify-center py-8 gap-2 text-slate-600">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <p class="text-xs">录入牌局信息后点击"请求 AI 分析"</p>
+        <p class="text-[10px] text-slate-700">提示：双击出牌河/碰杠区的牌可撤回</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：通用选牌器 -->
+  <div id="modal-picker" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="closePickerIfOutside(event)">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-3">
+        <span id="picker-title" class="text-sm font-bold text-slate-200">选牌</span>
+        <div class="flex gap-2 items-center">
+          <span id="picker-hint" class="text-[10px] text-slate-500"></span>
+          <button onclick="closePicker()" class="text-slate-400 hover:text-slate-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="picker-selected-preview" class="flex gap-1.5 mb-3 min-h-[36px] items-center flex-wrap"></div>
+      <div class="flex flex-col gap-2">
+        <div class="flex gap-1 items-center"><span class="text-[10px] text-red-400 font-bold w-5 text-center">万</span><div class="flex gap-1 flex-1 justify-between" id="grid-W"></div></div>
+        <div class="flex gap-1 items-center"><span class="text-[10px] text-blue-400 font-bold w-5 text-center">筒</span><div class="flex gap-1 flex-1 justify-between" id="grid-T"></div></div>
+        <div class="flex gap-1 items-center"><span class="text-[10px] text-emerald-400 font-bold w-5 text-center">条</span><div class="flex gap-1 flex-1 justify-between" id="grid-B"></div></div>
+      </div>
+      <button onclick="confirmPicker()" id="picker-confirm-btn" class="mt-4 w-full py-2.5 rounded-xl font-bold text-sm text-white bg-teal-700 hover:bg-teal-600 border border-teal-600 transition">确认</button>
+    </div>
+  </div>
+
+  <!-- 弹窗：动作选择 -->
+  <div id="modal-action" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="closeActionIfOutside(event)">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-4">
+        <span id="action-title" class="text-sm font-bold text-slate-200">选择操作</span>
+        <button onclick="closeAction()" class="text-slate-400 hover:text-slate-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="action-buttons" class="grid grid-cols-3 gap-2"></div>
+    </div>
+  </div>
+
+  <!-- 弹窗：杠类型选择 -->
+  <div id="modal-kong-type" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="if(event.target===this)closeKongType()">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-4">
+        <span id="kong-type-title" class="text-sm font-bold text-slate-200">选择杠类型</span>
+        <button onclick="closeKongType()" class="text-slate-400 hover:text-slate-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="kong-type-options" class="flex flex-col gap-2"></div>
+    </div>
+  </div>
+
+  <!-- 弹窗：明杠来源方向 -->
+  <div id="modal-kong-from" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="if(event.target===this)closeKongFrom()">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-bold text-slate-200">明杠来源（横牌方位）</span>
+        <button onclick="closeKongFrom()" class="text-slate-400 hover:text-slate-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="kong-from-options" class="grid grid-cols-3 gap-2"></div>
+    </div>
+  </div>
+
+  <!-- 弹窗：定缺选择 -->
+  <div id="modal-dingque" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="if(event.target===this)closeDingque()">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-4">
+        <span id="dingque-title" class="text-sm font-bold text-slate-200">录入定缺</span>
+        <button onclick="closeDingque()" class="text-slate-400 hover:text-slate-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="flex gap-3">
+        <button id="dingque-btn-W" onclick="confirmDingque('W')" class="flex-1 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-red-400 font-bold text-lg hover:border-red-500 hover:bg-red-950/30 transition">万</button>
+        <button id="dingque-btn-T" onclick="confirmDingque('T')" class="flex-1 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-blue-400 font-bold text-lg hover:border-blue-500 hover:bg-blue-950/30 transition">筒</button>
+        <button id="dingque-btn-B" onclick="confirmDingque('B')" class="flex-1 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-emerald-400 font-bold text-lg hover:border-emerald-500 hover:bg-emerald-950/30 transition">条</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：拍照录入 -->
+  <div id="modal-camera" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="if(event.target===this)closeCamera()">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-bold text-slate-200">拍照录入牌局</span>
+        <button onclick="closeCamera()" class="text-slate-400 hover:text-slate-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="flex flex-col gap-3">
+        <p class="text-xs text-slate-400">拍摄牌桌照片，AI 将自动识别牌局信息并生成录入数据。</p>
+        <div class="border-2 border-dashed border-slate-600 rounded-xl h-40 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-teal-600 hover:bg-teal-950/20 transition" onclick="triggerFileInput()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span class="text-xs text-slate-500">点击拍照或选择图片</span>
+        </div>
+        <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSelected(event)" />
+        <div id="camera-preview" class="hidden">
+          <img id="camera-preview-img" class="w-full rounded-lg border border-slate-700 max-h-48 object-cover" />
+          <button onclick="analyzePhoto()" class="mt-3 w-full py-2.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-teal-600 to-blue-600 border border-teal-500/50 transition hover:from-teal-500 hover:to-blue-500">
+            🔍 AI 识别牌局
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ═══════════════════════════════════════
+//  常量
+// ═══════════════════════════════════════
+const SUIT_NAME = { W: '万', T: '筒', B: '条' };
+const SUIT_COLOR = { W: '#ef4444', T: '#3b82f6', B: '#10b981' };
+const SUIT_BG = { W: 'bg-red-500', T: 'bg-blue-500', B: 'bg-emerald-500' };
+const SUIT_BORDER = { W: 'border-red-400', T: 'border-blue-400', B: 'border-emerald-400' };
+const SUIT_TEXT = { W: 'text-red-400', T: 'text-blue-400', B: 'text-emerald-400' };
+const PLAYER_LABEL = { me: '我方', left: '上家', right: '下家', across: '对家' };
+
+// ═══════════════════════════════════════
+//  状态
+// ═══════════════════════════════════════
+const state = {
+  players: {
+    me:     { dingque: null, melds: [], discards: [] },
+    left:   { dingque: null, melds: [], discards: [] },
+    right:  { dingque: null, melds: [], discards: [] },
+    across: { dingque: null, melds: [], discards: [] },
+  },
+  handCounts: { left: 13, right: 13, across: 13 },
+  myHand: [
+    {type:'W',value:1},{type:'W',value:2},{type:'W',value:4},{type:'W',value:5},{type:'W',value:8},
+    {type:'T',value:3},{type:'T',value:3},{type:'T',value:5},{type:'T',value:6},{type:'T',value:8},
+    {type:'B',value:1},{type:'B',value:7},{type:'B',value:9},
+  ],
+  selectedHandIdx: null,
+  swapOut: [], swapDir: null, swapIn: [],
+  history: [],
+  mode: 'mid',
+  flowStep: 'hand',
+};
+
+// 获取或创建警告弹窗
+function getWarningModal() {
+  let modal = document.getElementById('warning-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'warning-modal';
+    modal.className = 'modal-overlay hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center';
+    modal.addEventListener('click', () => hideWarning());
+    modal.innerHTML = ''+
+      '<div class="bg-[#0b1220] border border-orange-800/60 rounded-2xl p-5 mx-4 max-w-[300px] text-center shadow-2xl" onclick="event.stopPropagation()">'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.5" style="margin:0 auto"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'+
+        '<p id="warning-modal-msg" class="text-sm text-orange-300 mt-3 leading-relaxed"></p>'+
+        '<button onclick="hideWarning()" class="mt-3 text-xs text-slate-500 hover:text-slate-300 underline">关闭</button>'+
+      '</div>';
+    document.body.appendChild(modal);
+  }
+  return modal;
+}
+
+function showWarning(msg) {
+  const modal = getWarningModal();
+  document.getElementById('warning-modal-msg').textContent = msg;
+  modal.classList.remove('hidden');
+  clearTimeout(modal._timer);
+  modal._timer = setTimeout(() => hideWarning(), 3000);
+}
+
+function hideWarning() {
+  const modal = document.getElementById('warning-modal');
+  if (modal) { modal.classList.add('hidden'); clearTimeout(modal._timer); }
+}
+
+function clearWarning() {
+  hideWarning();
+}
+
+// 检测手牌中有哪些花色
+function handSuits() {
+  return [...new Set(state.myHand.map(t => t.type))];
+}
+
+// 计算全场已用牌张数（不含当前 pickerSelected）
+function getTileUsed() {
+  const used = {};
+  const add = (tiles) => tiles.forEach(t => { const k=`${t.type}${t.value}`; used[k]=(used[k]||0)+1; });
+  add(state.myHand);
+  Object.values(state.players).forEach(p => {
+    add(p.discards);
+    p.melds.forEach(m => add(m.tiles));
+  });
+  add(state.swapOut);
+  return used;
+}
+
+// ═══════════════════════════════════════
+//  渲染：牌组件
+// ═══════════════════════════════════════
+function createTileEl(tile, size='md', direction='up', opts={}) {
+  const sizes = {
+    sm: {w:20,h:28,numSize:'11px',suitSize:'8px',radius:'3px'},
+    md: {w:26,h:36,numSize:'15px',suitSize:'9px',radius:'4px'},
+    lg: {w:34,h:48,numSize:'21px',suitSize:'11px',radius:'5px'},
+    hand: {w:24,h:34,numSize:'13px',suitSize:'8px',radius:'4px'},
+  };
+  const s = sizes[size];
+  const isH = direction==='left'||direction==='right';
+  const rotateDeg = {up:0,down:180,left:90,right:-90}[direction];
+
+  const outer = document.createElement('div');
+  outer.style.cssText = `width:${isH?s.h:s.w}px;height:${isH?s.w:s.h}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;`;
+  if(opts.clickable) outer.style.cursor='pointer';
+
+  const inner = document.createElement('div');
+  let finalRotate = rotateDeg;
+  let outerW = isH ? s.h : s.w;
+  let outerH = isH ? s.w : s.h;
+
+  if(opts.horizontal) {
+    finalRotate = rotateDeg + 90;
+    outerW = s.h;
+    outerH = s.w;
+    outer.style.width = outerW + 'px';
+    outer.style.height = outerH + 'px';
+  }
+
+  inner.style.cssText = `width:${s.w}px;height:${s.h}px;background:#f9fafb;border:1px solid #d1d5db;border-radius:${s.radius};display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:bold;transform:rotate(${finalRotate}deg);flex-shrink:0;transition:transform 0.15s,box-shadow 0.15s,border-color 0.15s;`;
+
+  if(opts.isBack) {
+    inner.style.background = 'linear-gradient(135deg,#0f766e,#115e59,#0d4f4a)';
+    inner.style.border = '1px solid #0f766e';
+  } else {
+    const numSpan = document.createElement('span');
+    numSpan.textContent = tile.value;
+    numSpan.style.cssText = `font-size:${s.numSize};color:${SUIT_COLOR[tile.type]};line-height:1.1;`;
+    const suitSpan = document.createElement('span');
+    suitSpan.textContent = SUIT_NAME[tile.type];
+    suitSpan.style.cssText = `font-size:${s.suitSize};color:${SUIT_COLOR[tile.type]};line-height:1;`;
+    inner.appendChild(numSpan);
+    inner.appendChild(suitSpan);
+  }
+
+  outer.appendChild(inner);
+  outer._inner = inner;
+  return outer;
+}
+
+function createHiddenTileEl(direction='up') {
+  const w=14,h=20;
+  const isH = direction==='left'||direction==='right';
+  const rotateDeg = {up:0,down:180,left:90,right:-90}[direction];
+  const outer = document.createElement('div');
+  outer.style.cssText = `width:${isH?h:w}px;height:${isH?w:h}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
+  const inner = document.createElement('div');
+  inner.className = 'hidden-tile-inner';
+  inner.style.cssText = `width:${w}px;height:${h}px;transform:rotate(${rotateDeg}deg);flex-shrink:0;`;
+  outer.appendChild(inner);
+  return outer;
+}
+
+// ═══════════════════════════════════════
+//  渲染：碰杠区（不同杠样式）
+// ═══════════════════════════════════════
+function renderMeldGroup(meld, size='sm', direction='up') {
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex';
+  wrap.style.gap = '1px';
+  wrap.style.alignItems = 'flex-end';
+  if(direction==='left'||direction==='right') wrap.style.flexDirection='column';
+
+  const tile = meld.tiles[0];
+  if(meld.type === 'pong') {
+    for(let i=0;i<3;i++) wrap.appendChild(createTileEl(tile, size, direction));
+  } else if(meld.type === 'kong_ming') {
+    const fromDir = meld.fromDir || 'left';
+    const horizIdx = fromDir==='left'?0 : fromDir==='right'?3 : 1;
+    for(let i=0;i<4;i++) wrap.appendChild(createTileEl(tile, size, direction, {horizontal: i===horizIdx}));
+  } else if(meld.type === 'kong_an') {
+    for(let i=0;i<4;i++) wrap.appendChild(createTileEl(tile, size, direction, {isBack: i===1||i===2}));
+  } else if(meld.type === 'kong_bu') {
+    for(let i=0;i<4;i++) wrap.appendChild(createTileEl(tile, size, direction));
+  }
+  return wrap;
+}
+
+// ═══════════════════════════════════════
+//  渲染：全局
+// ═══════════════════════════════════════
+function updateBadge(player) {
+  const badge = document.getElementById(`badge-${player}`);
+  if(!badge) return;
+  const dq = state.players[player].dingque;
+  badge.className = 'absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow z-30';
+  if(!dq) { badge.classList.add('bg-slate-600','text-slate-200','border-slate-500'); badge.textContent='?'; }
+  else { badge.classList.add(SUIT_BG[dq],'text-white',SUIT_BORDER[dq]); badge.textContent=SUIT_NAME[dq]; }
+}
+
+function renderTable() {
+  renderDiscards('me','up');
+  renderDiscards('across','down');
+  renderDiscards('left','left');
+  renderDiscards('right','right');
+  renderAllMelds();
+  renderOpponentHand('across','down');
+  renderOpponentHand('left','left');
+  renderOpponentHand('right','right');
+  ['me','left','right','across'].forEach(updateBadge);
+}
+
+function renderDiscards(player, direction) {
+  const el = document.getElementById(`discard-${player}`);
+  if(!el) return;
+  el.innerHTML = '';
+  state.players[player].discards.forEach((tile,idx) => {
+    const tileEl = createTileEl(tile, 'sm', direction);
+    // 双击撤回：阻止冒泡防止触发容器的 openDiscardModal
+    tileEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      state.players[player].discards.splice(idx, 1);
+      state.history.push({type:'undoDiscard', player, tile, idx});
+      renderTable();
+      showToast(`已撤回${PLAYER_LABEL[player]}出牌：${tile.value}${SUIT_NAME[tile.type]}`);
+    });
+    // 单击也阻止冒泡，防止误触发容器的 onclick
+    tileEl.addEventListener('click', (e) => { e.stopPropagation(); });
+    tileEl.style.cursor = 'pointer';
+    tileEl.title = '双击撤回';
+    el.appendChild(tileEl);
+  });
+}
+
+function renderAllMelds() {
+  renderMelds('me','up','me-melds');
+  renderMelds('across','down','across-melds');
+  renderMelds('left','left','left-melds');
+  renderMelds('right','right','right-melds');
+}
+
+function renderMelds(player, direction, containerId) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  state.players[player].melds.forEach((meld, idx) => {
+    const group = renderMeldGroup(meld, player==='me'?'md':'sm', direction);
+    group.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      state.players[player].melds.splice(idx, 1);
+      state.history.push({type:'undoMeld', player, meld, idx});
+      renderTable();
+      showToast(`已撤回${PLAYER_LABEL[player]}的${meld.type==='pong'?'碰':'杠'}`);
+    });
+    group.style.cursor = 'pointer';
+    group.title = '双击撤回';
+    el.appendChild(group);
+  });
+}
+
+function renderOpponentHand(player, direction) {
+  const el = document.getElementById(`${player}-hand`);
+  if(!el) return;
+  const avatarDiv = el.querySelector(':scope > div');
+  el.innerHTML = '';
+  if(avatarDiv) el.appendChild(avatarDiv);
+  for(let i=0;i<state.handCounts[player];i++) el.appendChild(createHiddenTileEl(direction));
+}
+
+function isSwapPhase() {
+  return state.mode === 'new' && state.flowStep === 'swap' && state.players.me.dingque;
+}
+
+function renderMyHand() {
+  const el = document.getElementById('my-hand-display');
+  el.innerHTML = '';
+  const inSwap = isSwapPhase();
+  state.myHand.forEach((tile, idx) => {
+    const outer = createTileEl(tile, 'hand', 'up', {clickable:true});
+    const inner = outer._inner;
+
+    // swap-out 高亮：琥珀色
+    const inSwapOut = inSwap && state.swapOut.some(t => t.type===tile.type && t.value===tile.value);
+    if (inSwapOut) {
+      inner.style.transform = 'translateY(-8px) scale(1.08)';
+      inner.style.borderColor = '#f59e0b';
+      inner.style.boxShadow = '0 0 0 2px #fbbf24, 0 4px 12px rgba(245,158,11,0.4)';
+    } else if (state.selectedHandIdx === idx) {
+      inner.style.transform = 'translateY(-8px) scale(1.08)';
+      inner.style.borderColor = '#60a5fa';
+      inner.style.boxShadow = '0 0 0 2px #93c5fd, 0 4px 12px rgba(96,165,250,0.4)';
+    }
+
+    if (inSwap) {
+      outer.addEventListener('click', () => toggleSwapOutTile(idx));
+    } else {
+      outer.addEventListener('click', () => selectHandTile(idx));
+    }
+    el.appendChild(outer);
+  });
+  document.getElementById('hand-count-label').textContent = `(${state.myHand.length}张)`;
+
+  if (!inSwap) {
+    const confirmArea = document.getElementById('confirm-area');
+    const confirmBtn = document.getElementById('confirm-btn');
+    if(state.selectedHandIdx !== null) {
+      const t = state.myHand[state.selectedHandIdx];
+      confirmArea.classList.remove('hidden');
+      confirmBtn.textContent = `确认出牌：${t.value}${SUIT_NAME[t.type]}`;
+    } else {
+      confirmArea.classList.add('hidden');
+    }
+  }
+}
+
+function toggleSwapOutTile(idx) {
+  const tile = state.myHand[idx];
+  const dq = state.players.me.dingque;
+  if (tile.type !== dq) { showWarning(`换出的牌必须是定缺花色（${SUIT_NAME[dq]}），当前点击的是${SUIT_NAME[tile.type]}${tile.value}`); return; }
+
+  const existingIdx = state.swapOut.findIndex(t => t.type===tile.type && t.value===tile.value);
+  if (existingIdx >= 0) {
+    state.swapOut.splice(existingIdx, 1);
+    clearWarning();
+  } else {
+    if (state.swapOut.length >= 3) { showWarning('换出最多选3张牌，请先移除一张再选'); return; }
+    state.swapOut.push({type:tile.type, value:tile.value});
+    clearWarning();
+  }
+  renderMyHand();
+  renderSwapOut();
+}
+
+// ═══════════════════════════════════════
+//  交互：手牌/出牌
+// ═══════════════════════════════════════
+function selectHandTile(idx) {
+  state.selectedHandIdx = state.selectedHandIdx===idx ? null : idx;
+  renderMyHand();
+}
+
+function confirmDiscard() {
+  if(state.selectedHandIdx===null) return;
+  const tile = state.myHand.splice(state.selectedHandIdx, 1)[0];
+  state.players.me.discards.push(tile);
+  state.history.push({type:'discard', player:'me', tile});
+  state.selectedHandIdx = null;
+  renderMyHand(); renderTable();
+  showToast(`已出牌：${tile.value}${SUIT_NAME[tile.type]}`);
+}
+
+function undoLast() {
+  if(!state.history.length) { showToast('没有可撤销的操作'); return; }
+  const last = state.history.pop();
+  if(last.type==='discard' && last.player==='me') {
+    state.players.me.discards.pop();
+    state.myHand.push(last.tile);
+  } else if(last.type==='discard') {
+    state.players[last.player].discards.pop();
+  } else if(last.type==='meld') {
+    state.players[last.player].melds.pop();
+  } else if(last.type==='dingque') {
+    state.players[last.player].dingque = last.prev;
+  }
+  renderTable(); renderMyHand();
+  showToast('已撤销');
+}
+
+// ═══════════════════════════════════════
+//  换三张
+// ═══════════════════════════════════════
+function clearSwapOut() { state.swapOut=[]; renderSwapOut(); renderMyHand(); clearWarning(); }
+function setSwapDir(dir) {
+  state.swapDir = dir;
+  document.querySelectorAll('.swap-dir-btn').forEach(b => { b.classList.remove('border-amber-500','text-amber-400','bg-amber-950/30'); b.classList.add('border-slate-700','text-slate-400'); });
+  const btn = document.getElementById(`dir-${dir}`);
+  btn.classList.add('border-amber-500','text-amber-400','bg-amber-950/30');
+  btn.classList.remove('border-slate-700','text-slate-400');
+}
+function renderSwapOut() {
+  const el = document.getElementById('swap-out-display');
+  el.innerHTML = '';
+  if(!state.swapOut.length) el.innerHTML='<span class="text-[10px] text-slate-600">从手牌中点选</span>';
+  else state.swapOut.forEach(t => el.appendChild(createTileEl(t,'sm','up')));
+}
+function renderSwapIn() {
+  const el = document.getElementById('swap-in-display');
+  el.innerHTML = '';
+  if(!state.swapIn.length) el.innerHTML='<span class="text-[10px] text-slate-600">点击选择换入3张</span>';
+  else state.swapIn.forEach(t => el.appendChild(createTileEl(t,'sm','up')));
+}
+function confirmSwap() {
+  if(state.swapOut.length!==3){showWarning('请从手牌中选出恰好3张牌进行换出');return;}
+  if(!state.swapDir){showWarning('请选择换牌方向（上家/下家/对家）');return;}
+  if(state.swapIn.length!==3){showWarning('请点击"选牌"录入换入的3张牌');return;}
+
+  // 花色约束：换出的3张必须同花色
+  const suits=[...new Set(state.swapOut.map(t=>t.type))];
+  if(suits.length>1){showWarning(`换出的3张必须同花色！当前选择了${suits.map(s=>SUIT_NAME[s]).join('和')}`);return;}
+
+  // 新对局模式：换出花色必须与定缺一致
+  if (state.mode === 'new') {
+    const dq = state.players.me.dingque;
+    if (suits[0] !== dq) {
+      showWarning(`换出的花色必须是你定缺的花色。定缺：${SUIT_NAME[dq]}，你选择的是${SUIT_NAME[suits[0]]}`);
+      return;
+    }
+  }
+
+  state.swapOut.forEach(out => { const idx=state.myHand.findIndex(t=>t.type===out.type&&t.value===out.value); if(idx!==-1) state.myHand.splice(idx,1); });
+  state.swapIn.forEach(t => state.myHand.push(t));
+  state.myHand.sort((a,b) => {const so={W:0,T:1,B:2}; return so[a.type]-so[b.type]||a.value-b.value;});
+  state.history.push({type:'swap'});
+  state.swapOut=[]; state.swapDir=null; state.swapIn=[];
+
+  // 新对局模式：换三张完成
+  if (state.mode === 'new') {
+    state.flowStep = 'ready';
+    clearWarning();
+    document.getElementById('panel-swap').classList.add('hidden');
+    const subtitle = document.getElementById('mode-subtitle');
+    if (subtitle) subtitle.textContent = '血战到底 · 新对局 · 准备完成';
+  }
+
+  renderSwapOut(); renderSwapIn(); renderMyHand();
+  showToast('换三张完成！');
+}
+
+// ═══════════════════════════════════════
+//  定缺
+// ═══════════════════════════════════════
+function setMyDingque(suit) {
+  state.players.me.dingque = suit;
+  state.history.push({type:'dingque', player:'me', prev: null});
+  ['W','T','B'].forEach(s => {
+    const btn = document.getElementById(`dq-${s}`);
+    if (!btn) return;
+    const ac = {W:'border-red-500 bg-red-950/40',T:'border-blue-500 bg-blue-950/40',B:'border-emerald-500 bg-emerald-950/40'};
+    btn.className = `dq-btn flex-1 py-2.5 rounded-lg border-2 font-bold text-sm transition ${SUIT_TEXT[s]}`;
+    btn.classList.add(...(s===suit ? ac[s].split(' ') : ['border-slate-700','bg-slate-800']));
+  });
+  updateBadge('me');
+}
+
+// ═══════════════════════════════════════
+//  弹窗：动作选择
+// ═══════════════════════════════════════
+let currentActionPlayer = null;
+
+function openActionModal(player) {
+  currentActionPlayer = player;
+  document.getElementById('action-title').textContent = `${PLAYER_LABEL[player]} - 选择操作`;
+  const container = document.getElementById('action-buttons');
+  container.innerHTML = '';
+
+  const actions = [
+    {id:'pong', label:'碰', hover:'hover:bg-amber-900/40 hover:border-amber-600 hover:text-amber-300'},
+    {id:'kong', label:'杠', hover:'hover:bg-purple-900/40 hover:border-purple-600 hover:text-purple-300'},
+    {id:'win', label:'胡', hover:'hover:bg-teal-900/40 hover:border-teal-600 hover:text-teal-300'},
+    {id:'dingque', label:'定缺', hover:'hover:bg-blue-900/40 hover:border-blue-600 hover:text-blue-300'},
+  ];
+
+  // 如果有碰牌，增加补杠选项
+  const pongTiles = state.players[player].melds.filter(m => m.type==='pong');
+  if(pongTiles.length > 0) {
+    actions.splice(2, 0, {id:'kong_bu', label:'补杠', hover:'hover:bg-pink-900/40 hover:border-pink-600 hover:text-pink-300'});
+  }
+
+  actions.push({id:'pass', label:'取消', hover:'hover:bg-slate-700', extra:'col-span-2 text-slate-400'});
+
+  actions.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = `py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm transition ${a.hover} ${a.extra||''}`;
+    btn.textContent = a.label;
+    btn.onclick = () => doAction(a.id);
+    container.appendChild(btn);
+  });
+
+  document.getElementById('modal-action').classList.remove('hidden');
+}
+
+function closeAction() { document.getElementById('modal-action').classList.add('hidden'); }
+function closeActionIfOutside(e) { if(e.target===document.getElementById('modal-action')) { closeAction(); currentActionPlayer=null; } }
+
+function doAction(action) {
+  const p = currentActionPlayer;
+  if(action==='pass') { closeAction(); currentActionPlayer=null; return; }
+  if(action==='dingque') {
+    closeAction();
+    document.getElementById('dingque-title').textContent = `${PLAYER_LABEL[p]} - 录入定缺`;
+    // 新对局模式：我方定缺只能选手中已有的花色
+    ['W','T','B'].forEach(suit => {
+      const btn = document.getElementById(`dingque-btn-${suit}`);
+      if (!btn) return;
+      if (state.mode === 'new' && p === 'me') {
+        const inHand = handSuits().includes(suit);
+        btn.disabled = !inHand;
+        btn.style.opacity = inHand ? '1' : '0.3';
+        btn.style.cursor = inHand ? 'pointer' : 'not-allowed';
+        btn.title = inHand ? '' : `手牌中没有${SUIT_NAME[suit]}花色`;
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.title = '';
+      }
+    });
+    document.getElementById('modal-dingque').classList.remove('hidden');
+    return;
+  }
+  closeAction();
+  if(action==='win') { showToast(`${PLAYER_LABEL[p]} 胡牌！`); currentActionPlayer=null; return; }
+  if(action==='pong') { openMeldPicker(p, 'pong'); currentActionPlayer=null; return; }
+  if(action==='kong') { openKongTypeModal(p); currentActionPlayer=null; return; }
+  if(action==='kong_bu') { openBuGangPicker(p); currentActionPlayer=null; return; }
+}
+
+// ═══════════════════════════════════════
+//  弹窗：杠类型选择
+// ═══════════════════════════════════════
+let kongTypePlayer = null;
+
+function openKongTypeModal(player) {
+  kongTypePlayer = player;
+  document.getElementById('kong-type-title').textContent = '选择杠类型';
+  const container = document.getElementById('kong-type-options');
+  container.innerHTML = '';
+  const types = [
+    {id:'kong_ming', label:'明杠', desc:'他家点出一张，加上自己手中3张', color:'text-amber-400'},
+    {id:'kong_an', label:'暗杠', desc:'手中4张相同牌，暗杠不公开牌面', color:'text-purple-400'},
+  ];
+  types.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'py-3 px-4 rounded-xl bg-slate-800 border border-slate-700 text-left hover:bg-slate-700 transition';
+    btn.innerHTML = `<span class="font-bold text-sm ${t.color}">${t.label}</span><br><span class="text-[10px] text-slate-500">${t.desc}</span>`;
+    btn.onclick = () => { closeKongType(); doKongByType(player, t.id); };
+    container.appendChild(btn);
+  });
+  document.getElementById('modal-kong-type').classList.remove('hidden');
+}
+
+function closeKongType() { document.getElementById('modal-kong-type').classList.add('hidden'); }
+
+function doKongByType(player, kongType) {
+  openMeldPicker(player, kongType);
+}
+
+// ═══════════════════════════════════════
+//  弹窗：补杠（从已碰中选）
+// ═══════════════════════════════════════
+function openBuGangPicker(player) {
+  const pongs = state.players[player].melds.filter(m => m.type==='pong');
+  if(!pongs.length) { showToast('没有可补杠的碰牌'); return; }
+  if(pongs.length === 1) { doBuGang(player, state.players[player].melds.indexOf(pongs[0])); return; }
+
+  document.getElementById('kong-type-title').textContent = '选择要补杠的碰牌';
+  const container = document.getElementById('kong-type-options');
+  container.innerHTML = '';
+  pongs.forEach(meld => {
+    const realIdx = state.players[player].melds.indexOf(meld);
+    const t = meld.tiles[0];
+    const btn = document.createElement('button');
+    btn.className = 'py-3 px-4 rounded-xl bg-slate-800 border border-slate-700 text-left hover:bg-slate-700 transition flex items-center gap-3';
+    btn.innerHTML = `<span class="font-bold text-lg" style="color:${SUIT_COLOR[t.type]}">${t.value}${SUIT_NAME[t.type]}</span><span class="text-[10px] text-slate-500">将碰变为补杠</span>`;
+    btn.onclick = () => { closeKongType(); doBuGang(player, realIdx); };
+    container.appendChild(btn);
+  });
+  document.getElementById('modal-kong-type').classList.remove('hidden');
+}
+
+function doBuGang(player, meldIdx) {
+  const meld = state.players[player].melds[meldIdx];
+  const tile = meld.tiles[0];
+  // 牌张约束：检查该牌是否还有剩余
+  const used = getTileUsed();
+  const key = `${tile.type}${tile.value}`;
+  const usedCount = used[key]||0;
+  if(usedCount >= 4) { showToast(`${tile.value}${SUIT_NAME[tile.type]}已全部可见，无法补杠`); return; }
+  state.players[player].melds[meldIdx] = {type:'kong_bu', tiles:[tile,tile,tile,tile], fromDir: meld.fromDir};
+  state.history.push({type:'meld', player});
+  renderTable();
+  showToast(`${PLAYER_LABEL[player]} 补杠：${tile.value}${SUIT_NAME[tile.type]}`);
+}
+
+// ═══════════════════════════════════════
+//  弹窗：明杠来源方向
+// ═══════════════════════════════════════
+let kongFromCallback = null;
+
+function openKongFromModal(callback) {
+  kongFromCallback = callback;
+  const container = document.getElementById('kong-from-options');
+  container.innerHTML = '';
+  [{id:'left',label:'上家'},{id:'mid',label:'对家'},{id:'right',label:'下家'}].forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm hover:bg-slate-700 hover:border-amber-500 transition';
+    btn.textContent = d.label;
+    btn.onclick = () => { closeKongFrom(); if(kongFromCallback) kongFromCallback(d.id); };
+    container.appendChild(btn);
+  });
+  document.getElementById('modal-kong-from').classList.remove('hidden');
+}
+
+function closeKongFrom() { document.getElementById('modal-kong-from').classList.add('hidden'); }
+
+// ═══════════════════════════════════════
+//  弹窗：碰/杠选牌
+// ═══════════════════════════════════════
+let meldPlayer = null, meldType = null;
+
+function openMeldPicker(player, type) {
+  meldPlayer = player;
+  meldType = type;
+  const typeLabels = {pong:'碰', kong_ming:'明杠', kong_an:'暗杠'};
+  pickerMode = 'meld';
+  pickerMaxCount = 1;
+  pickerSelected = [];
+  document.getElementById('picker-title').textContent = `${PLAYER_LABEL[player]} ${typeLabels[type]} — 选牌`;
+  document.getElementById('picker-hint').textContent = '选1张';
+  document.getElementById('picker-confirm-btn').onclick = function() {
+    if(!pickerSelected.length) { showToast('请选一张牌'); return; }
+    const tile = pickerSelected[0];
+    // 牌张约束：碰需3张、杠需4张
+    const used = getTileUsed();
+    const key = `${tile.type}${tile.value}`;
+    const usedCount = used[key]||0;
+    const needed = (meldType==='pong') ? 3 : 4;
+    if(usedCount + needed > 4) {
+      showToast(`${tile.value}${SUIT_NAME[tile.type]}剩余不足${needed}张，无法${typeLabels[meldType]}`);
+      return;
+    }
+    if(meldType==='kong_ming') {
+      closePicker();
+      openKongFromModal((fromDir) => {
+        state.players[meldPlayer].melds.push({type:'kong_ming', tiles:[tile,tile,tile,tile], fromDir});
+        state.history.push({type:'meld', player:meldPlayer});
+        renderTable();
+        showToast(`${PLAYER_LABEL[meldPlayer]} 明杠：${tile.value}${SUIT_NAME[tile.type]}`);
+      });
+    } else {
+      const tiles = meldType==='pong' ? [tile,tile,tile] : [tile,tile,tile,tile];
+      state.players[meldPlayer].melds.push({type:meldType, tiles});
+      state.history.push({type:'meld', player:meldPlayer});
+      closePicker(); renderTable();
+      showToast(`${PLAYER_LABEL[meldPlayer]} ${typeLabels[meldType]}：${tile.value}${SUIT_NAME[tile.type]}`);
+    }
+    document.getElementById('picker-confirm-btn').onclick = confirmPicker;
+  };
+  openPickerModal();
+}
+
+// ═══════════════════════════════════════
+//  弹窗：定缺
+// ═══════════════════════════════════════
+function closeDingque() { document.getElementById('modal-dingque').classList.add('hidden'); }
+function confirmDingque(suit) {
+  if(!currentActionPlayer) return;
+
+  // 新对局模式：我方定缺必须从手牌已有花色中选择
+  if (state.mode === 'new' && currentActionPlayer === 'me') {
+    const inHand = handSuits();
+    if (!inHand.includes(suit)) {
+      showWarning(`定缺花色必须来自手牌已有花色。当前手牌有：${inHand.map(s => SUIT_NAME[s]).join('、')}，不能定缺${SUIT_NAME[suit]}`);
+      return;
+    }
+  }
+
+  const prev = state.players[currentActionPlayer].dingque;
+  state.players[currentActionPlayer].dingque = suit;
+  state.history.push({type:'dingque', player:currentActionPlayer, prev});
+  updateBadge(currentActionPlayer);
+  closeDingque();
+
+  // 新对局模式：定缺完成后进入换三张阶段
+  if (state.mode === 'new' && currentActionPlayer === 'me') {
+    state.flowStep = 'swap';
+    state.swapOut = []; state.swapIn = []; state.swapDir = null;
+    renderSwapOut(); renderSwapIn(); renderMyHand();
+    clearWarning();
+    const swapHint = document.getElementById('swap-hint');
+    if (swapHint) swapHint.textContent = `点击手牌选出3张${SUIT_NAME[suit]}，再选方向和换入牌`;
+    document.getElementById('panel-swap').classList.remove('hidden');
+    showWarning(`请在下方手牌中点选3张${SUIT_NAME[suit]}进行换出`);
+  }
+
+  showToast(`${PLAYER_LABEL[currentActionPlayer]} 定缺：${SUIT_NAME[suit]}`);
+  currentActionPlayer = null;
+}
+
+// ═══════════════════════════════════════
+//  弹窗：通用选牌器（支持同牌多选）
+// ═══════════════════════════════════════
+let pickerMode = 'discard';
+let pickerMaxCount = 99;
+let pickerSelected = [];
+let discardTarget = null;
+
+function openDiscardModal(player) {
+  discardTarget = player;
+  pickerMode = 'discard';
+  pickerMaxCount = 99;
+  pickerSelected = [];
+  document.getElementById('picker-title').textContent = `录入 ${PLAYER_LABEL[player]} 出牌`;
+  document.getElementById('picker-hint').textContent = '可多选（含同牌），完成后确认';
+  document.getElementById('picker-confirm-btn').onclick = confirmPicker;
+  openPickerModal();
+}
+
+function openTilePicker(mode, maxCount) {
+  pickerMode = mode;
+  pickerMaxCount = maxCount;
+  pickerSelected = [];
+  if(mode==='swapIn') {
+    document.getElementById('picker-title').textContent = '选择换入3张牌';
+    document.getElementById('picker-hint').textContent = '选3张';
+  }
+  document.getElementById('picker-confirm-btn').onclick = confirmPicker;
+  openPickerModal();
+}
+
+function openHandEditor() {
+  pickerMode = 'handEdit';
+  pickerMaxCount = 14;
+  pickerSelected = state.myHand.map(t=>({...t}));
+  document.getElementById('picker-title').textContent = '录入/编辑我方手牌';
+  document.getElementById('picker-hint').textContent = `当前${pickerSelected.length}张 (最多14张，新对局建议先录13张)`;
+  document.getElementById('picker-confirm-btn').onclick = function() {
+    state.myHand = [...pickerSelected];
+    state.myHand.sort((a,b) => {const so={W:0,T:1,B:2}; return so[a.type]-so[b.type]||a.value-b.value;});
+    state.selectedHandIdx = null;
+    state.swapOut = []; state.swapIn = []; state.swapDir = null;
+    renderSwapOut(); renderSwapIn();
+    renderMyHand(); renderTable();
+    closePicker();
+    document.getElementById('picker-confirm-btn').onclick = confirmPicker;
+
+    // 新对局模式：手牌录入后进入定缺阶段
+    if (state.mode === 'new' && state.myHand.length >= 13) {
+      state.flowStep = 'dingque';
+      clearWarning();
+      const suits = handSuits();
+      showWarning(`请点击"我"头像定缺，可选花色：${suits.map(s => SUIT_NAME[s]).join('、')}`);
+    } else if (state.mode === 'new' && state.myHand.length < 13) {
+      state.flowStep = 'hand';
+    }
+    showToast(`手牌已更新（${state.myHand.length}张）`);
+  };
+  openPickerModal();
+}
+
+function openPickerModal() {
+  renderPickerGrid();
+  renderPickerPreview();
+  document.getElementById('modal-picker').classList.remove('hidden');
+}
+
+function closePicker() {
+  document.getElementById('modal-picker').classList.add('hidden');
+  pickerSelected = [];
+  discardTarget = null;
+}
+
+function closePickerIfOutside(e) { if(e.target===document.getElementById('modal-picker')) closePicker(); }
+
+function renderPickerGrid() {
+  const used = getTileUsed();
+
+  ['W','T','B'].forEach(suit => {
+    const grid = document.getElementById(`grid-${suit}`);
+    grid.innerHTML = '';
+    for(let v=1;v<=9;v++) {
+      const key = `${suit}${v}`;
+      let baseUsed = used[key] || 0;
+
+      // 编辑手牌模式：当前手牌不算已用（因为在编辑中）
+      if(pickerMode==='handEdit') {
+        const inOriginalHand = state.myHand.filter(t=>t.type===suit&&t.value===v).length;
+        baseUsed = baseUsed - inOriginalHand;
+      }
+
+      const inSel = pickerSelected.filter(t=>t.type===suit&&t.value===v).length;
+      const totalUsedWithSel = baseUsed + inSel;
+      const remaining = 4 - baseUsed;  // 总共还能选几张
+      const canAdd = (4 - totalUsedWithSel) > 0 && pickerSelected.length < pickerMaxCount;
+
+      const btn = document.createElement('button');
+      const isActive = inSel > 0;
+      btn.style.cssText = `flex:1;aspect-ratio:0.72;max-width:34px;border-radius:5px;border:${isActive?'2px':'1px'} solid ${isActive?SUIT_COLOR[suit]:'#334155'};background:${isActive?'#1e3a5f':'#1e293b'};color:${SUIT_COLOR[suit]};font-size:12px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:${(!canAdd&&!isActive)?'not-allowed':'pointer'};opacity:${(!canAdd&&!isActive)?'0.25':'1'};transition:all 0.1s;padding:2px;position:relative;`;
+
+      // 显示数字 + 选中数/剩余数
+      const countLabel = isActive ? `${inSel}选` : `余${remaining}`;
+      btn.innerHTML = `<span style="font-size:14px;line-height:1.2">${v}</span><span style="font-size:8px;color:${isActive?'#94a3b8':'#475569'}">${countLabel}</span>`;
+
+      if(canAdd || isActive) {
+        btn.addEventListener('click', () => togglePickerTile(suit, v));
+      }
+      grid.appendChild(btn);
+    }
+  });
+}
+
+function togglePickerTile(suit, v) {
+  // 长按或再次点击已选牌：减少选中数量
+  const idx = pickerSelected.findIndex(t=>t.type===suit&&t.value===v);
+
+  // 计算该牌当前选了几张
+  const inSel = pickerSelected.filter(t=>t.type===suit&&t.value===v).length;
+  const used = getTileUsed();
+  const key = `${suit}${v}`;
+  let baseUsed = used[key]||0;
+  if(pickerMode==='handEdit') {
+    baseUsed -= state.myHand.filter(t=>t.type===suit&&t.value===v).length;
+  }
+  const totalUsed = baseUsed + inSel;
+  const canAddMore = totalUsed < 4 && pickerSelected.length < pickerMaxCount;
+
+  if(canAddMore) {
+    // 可以继续添加
+    pickerSelected.push({type:suit, value:v});
+  } else if(inSel > 0) {
+    // 已达上限或总数已满，点击则减少一张
+    const lastIdx = pickerSelected.map((t,i)=>({t,i})).filter(x=>x.t.type===suit&&x.t.value===v).pop().i;
+    pickerSelected.splice(lastIdx, 1);
+  }
+
+  renderPickerGrid();
+  renderPickerPreview();
+  if(pickerMode==='handEdit') {
+    document.getElementById('picker-hint').textContent = `当前${pickerSelected.length}张 (最多14张)`;
+  }
+}
+
+function renderPickerPreview() {
+  const el = document.getElementById('picker-selected-preview');
+  el.innerHTML = '';
+  if(!pickerSelected.length) {
+    el.innerHTML = '<span style="font-size:10px;color:#475569">已选：无（点击牌张添加，再点减少）</span>';
+  } else {
+    el.innerHTML = `<span style="font-size:10px;color:#64748b;margin-right:4px">已选${pickerSelected.length}张：</span>`;
+    pickerSelected.forEach(t => el.appendChild(createTileEl(t,'sm','up')));
+  }
+}
+
+function confirmPicker() {
+  if(!pickerSelected.length) { showToast('请选择牌张'); return; }
+  if(pickerMode==='discard' && discardTarget) {
+    pickerSelected.forEach(t => {
+      state.players[discardTarget].discards.push({...t});
+      state.history.push({type:'discard', player:discardTarget, tile:t});
+    });
+    renderTable();
+    showToast(`已录入${PLAYER_LABEL[discardTarget]}出牌 ${pickerSelected.length}张`);
+  } else if(pickerMode==='swapIn') {
+    if(pickerSelected.length!==3) { showToast('换入必须3张'); return; }
+    state.swapIn = [...pickerSelected];
+    renderSwapIn();
+  }
+  closePicker();
+}
+
+// ═══════════════════════════════════════
+//  拍照录入
+// ═══════════════════════════════════════
+function openCameraInput() {
+  document.getElementById('camera-preview').classList.add('hidden');
+  document.getElementById('modal-camera').classList.remove('hidden');
+}
+function closeCamera() { document.getElementById('modal-camera').classList.add('hidden'); }
+function triggerFileInput() { document.getElementById('camera-file-input').click(); }
+function handlePhotoSelected(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('camera-preview-img').src = ev.target.result;
+    document.getElementById('camera-preview').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+function analyzePhoto() {
+  showToast('AI 识别中...');
+  setTimeout(() => {
+    closeCamera();
+    showToast('识别完成！（Demo模式：已加载示例数据）');
+  }, 1500);
+}
+
+// ═══════════════════════════════════════
+//  AI 分析（Mock）
+// ═══════════════════════════════════════
+const mockAdvice = {
+  primary: '打 7条', confidence: '把握极高', benefitScore: 85, riskScore: 10,
+  warnings: ['下家连续打出万字，极大概率在做筒子清一色！','场上4万、6万已出尽，5万成为绝张断头牌，请防暗对。'],
+  reasons: [
+    {title:'清理缺门', detail:'规则强制必须缺一门，优先打出最后的条子。'},
+    {title:'保留核心搭子', detail:'手中有3、4、5、6筒的高联络张，保留可最大化听牌面。'},
+    {title:'安全性极高', detail:'7条在场上已经是熟张，放铳概率接近0。'},
+  ],
+  alternatives: [{card:'1万', gap:'收益差 -25分（纯防守降级）'}]
+};
+
+function requestAI() {
+  const btn = document.getElementById('ai-btn');
+  btn.textContent = '分析中...'; btn.disabled=true; btn.style.opacity='0.7';
+  setTimeout(() => {
+    renderAdvice(mockAdvice);
+    btn.textContent = '⚡ 请求 AI 分析出牌建议'; btn.disabled=false; btn.style.opacity='1';
+    document.getElementById('advice-section').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 1200);
+}
+
+function renderAdvice(advice) {
+  document.getElementById('advice-placeholder').classList.add('hidden');
+  const warnBox = document.getElementById('warning-box');
+  const warnContent = document.getElementById('warning-content');
+  if(advice.warnings&&advice.warnings.length) {
+    warnContent.innerHTML = '';
+    advice.warnings.forEach(w => { const p=document.createElement('p'); p.className='text-xs text-orange-400 leading-relaxed'; p.textContent=w; warnContent.appendChild(p); });
+    warnBox.classList.remove('hidden');
+  }
+  document.getElementById('advice-card').classList.remove('hidden');
+  document.getElementById('advice-primary').textContent = advice.primary;
+  document.getElementById('advice-confidence').textContent = advice.confidence;
+  document.getElementById('benefit-score').textContent = advice.benefitScore;
+  document.getElementById('risk-score').textContent = advice.riskScore;
+  setTimeout(() => {
+    document.getElementById('benefit-bar').style.width = advice.benefitScore+'%';
+    document.getElementById('risk-bar').style.width = advice.riskScore+'%';
+  }, 100);
+  const reasonsList = document.getElementById('reasons-list');
+  reasonsList.innerHTML = '';
+  advice.reasons.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-2';
+    div.innerHTML = `<div style="width:6px;height:6px;border-radius:50%;background:#64748b;margin-top:6px;flex-shrink:0"></div><p class="text-xs text-slate-300 leading-relaxed"><span class="font-bold text-slate-200">${r.title}：</span>${r.detail}</p>`;
+    reasonsList.appendChild(div);
+  });
+  const altList = document.getElementById('alternatives-list');
+  altList.innerHTML = '';
+  advice.alternatives.forEach(alt => {
+    const div = document.createElement('div');
+    div.className = 'flex justify-between items-center text-xs';
+    div.innerHTML = `<span class="text-slate-300 bg-slate-800 px-2 py-1 rounded border border-slate-700">${alt.card}</span><span class="text-slate-500 text-[10px]">${alt.gap}</span>`;
+    altList.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════
+//  Toast
+// ═══════════════════════════════════════
+function showToast(msg) {
+  let toast = document.getElementById('toast');
+  if(!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:8px 18px;border-radius:20px;font-size:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);pointer-events:none;transition:opacity 0.3s;white-space:nowrap;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity='0'; }, 2000);
+}
+
+// ═══════════════════════════════════════
+//  初始化
+// ═══════════════════════════════════════
+function switchMode(mode) {
+  state.mode = mode;
+  const btnNew = document.getElementById('mode-new');
+  const btnMid = document.getElementById('mode-mid');
+  const panelSwap = document.getElementById('panel-swap');
+  const subtitle = document.getElementById('mode-subtitle');
+
+  if (mode === 'new') {
+    btnNew.className = 'text-[10px] px-2 py-0.5 rounded transition bg-slate-700 text-slate-200 font-bold';
+    btnMid.className = 'text-[10px] px-2 py-0.5 rounded transition text-slate-500 hover:text-slate-300';
+    // 已完成完整流程，不再展示换三张
+    if (state.flowStep === 'ready') {
+      panelSwap.classList.add('hidden');
+      subtitle.textContent = '血战到底 · 新对局 · 准备完成';
+      return;
+    }
+    // 手牌不足时先引导录入手牌
+    if (state.myHand.length < 13) {
+      state.flowStep = 'hand';
+      panelSwap.classList.add('hidden');
+      subtitle.textContent = '血战到底 · 新对局 · 请先录入手牌';
+      showWarning('新对局流程：请先点击"录入手牌"按钮，输入至少13张手牌');
+    } else if (!state.players.me.dingque) {
+      state.flowStep = 'dingque';
+      panelSwap.classList.add('hidden');
+      subtitle.textContent = '血战到底 · 新对局 · 请定缺';
+      showWarning('请点击"我"头像定缺，选择手牌中已有的一种花色');
+    } else {
+      state.flowStep = 'swap';
+      panelSwap.classList.remove('hidden');
+      const dq = state.players.me.dingque;
+      const swapHint = document.getElementById('swap-hint');
+      if (swapHint && dq) swapHint.textContent = `点击手牌选出3张${SUIT_NAME[dq]}，再选方向和换入牌`;
+      subtitle.textContent = '血战到底 · 新对局 · 换三张';
+    }
+  } else {
+    btnMid.className = 'text-[10px] px-2 py-0.5 rounded transition bg-slate-700 text-slate-200 font-bold';
+    btnNew.className = 'text-[10px] px-2 py-0.5 rounded transition text-slate-500 hover:text-slate-300';
+    panelSwap.classList.add('hidden');
+    subtitle.textContent = '血战到底 · 中途录入';
+    clearWarning();
+  }
+}
+
+function initMockData() {
+  state.players.me.dingque = 'B';
+  state.players.left.dingque = 'W';
+  state.players.right.dingque = null;
+  state.players.across.dingque = 'B';
+
+  state.players.me.melds = [{type:'pong', tiles:[{type:'T',value:4},{type:'T',value:4},{type:'T',value:4}]}];
+  state.players.left.melds = [{type:'kong_an', tiles:[{type:'T',value:8},{type:'T',value:8},{type:'T',value:8},{type:'T',value:8}]}];
+  state.players.right.melds = [{type:'kong_ming', tiles:[{type:'T',value:2},{type:'T',value:2},{type:'T',value:2},{type:'T',value:2}], fromDir:'left'}];
+  state.players.across.melds = [{type:'kong_bu', tiles:[{type:'W',value:6},{type:'W',value:6},{type:'W',value:6},{type:'W',value:6}]}];
+
+  state.players.me.discards = [{type:'W',value:8},{type:'B',value:9},{type:'B',value:2}];
+  state.players.left.discards = [{type:'T',value:1},{type:'T',value:9},{type:'T',value:2},{type:'W',value:5}];
+  state.players.right.discards = [{type:'W',value:5},{type:'W',value:6},{type:'W',value:7}];
+  state.players.across.discards = [{type:'T',value:7},{type:'W',value:3},{type:'W',value:4},{type:'B',value:1}];
+
+  setMyDingque('B');
+  setSwapDir('left');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  switchMode('mid');
+  initMockData();
+  renderTable();
+  renderMyHand();
+  renderSwapOut();
+  renderSwapIn();
+});
+</script>
+</body>
+</html>

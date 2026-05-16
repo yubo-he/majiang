@@ -1,0 +1,54 @@
+{
+  "image_path": "/home/free/dataset/input/test1.jpg",
+  "analysis_date": "2026-05-16",
+  "game_type": "川麻换三张",
+  "my_hand": {
+    "suosu": [
+      {"tile": "一索", "count": 2},
+      {"tile": "三索", "count": 1},
+      {"tile": "四索", "count": 2},
+      {"tile": "五索", "count": 1},
+      {"tile": "七索", "count": 1},
+      {"tile": "八索", "count": 1},
+      {"tile": "九索", "count": 1}
+    ],
+    "tongzi": [
+      {"tile": "三筒", "count": 1},
+      {"tile": "四筒", "count": 2},
+      {"tile": "七筒", "count": 1},
+      {"tile": "八筒", "count": 1}
+    ],
+    "total_count": 14,
+    "all_tiles": ["一索", "一索", "三索", "四索", "四索", "五索", "七索", "八索","九索", "三筒", "四筒","四筒", "七筒",  "八筒"]
+  },
+  "river": {
+    "wanzi": [
+      {"tile": "四万", "count": 2},
+      {"tile": "五万", "count": 2},
+      {"tile": "二万", "count": 3},
+      {"tile": "七万", "count": 1}
+    ],
+    "tongzi": [
+      {"tile": "二筒", "count": 3},
+      {"tile": "五筒", "count": 2},
+      {"tile": "六筒", "count": 1},
+      {"tile": "八筒", "count": 1}
+    ],
+    "suosu": [
+      {"tile": "五索", "count": 1},
+      {"tile": "七索", "count": 1},
+      {"tile": "八索", "count": 1}
+    ]
+  },
+  "opponent_peng": {
+    "opposite_player": {
+      "peng": [
+        {"tile": "六索", "count": 3},
+        {"tile": "九索", "count": 3},
+        {"tile": "九万", "count": 4}
+      ],
+      "status": "正在摸牌"
+    }
+  },
+  "notes": "川麻换三张标准手牌应为 13 张，缺一门为万，刚摸进四索，牌河中部分牌可能被遮挡，识别可能存在误差。"
+}
