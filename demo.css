@@ -1,0 +1,33 @@
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.tile-selected {
+  transform: translateY(-8px) scale(1.08) !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 2px #93c5fd, 0 4px 12px rgba(96, 165, 250, 0.4) !important;
+  z-index: 10;
+}
+.tile-disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+.modal-overlay { animation: fadeIn 0.15s ease; }
+.modal-box { animation: slideUp 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(30px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.hidden-tile-inner {
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 60%, #0d4f4a 100%);
+  border: 1px solid #0f766e;
+  border-radius: 3px;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(37, 99, 235, 0.5); }
+  50% { box-shadow: 0 0 22px rgba(59, 130, 246, 0.8), 0 0 40px rgba(37, 99, 235, 0.3); }
+}
+.btn-confirm { animation: pulse-glow 2s infinite; }
+@keyframes blink-border {
+  0%, 100% { border-color: #14b8a6; }
+  50% { border-color: #5eead4; }
+}
+.badge-phase { animation: blink-border 2s infinite; }
+.table-inner-border {
+  background: linear-gradient(135deg, rgba(20,184,166,0.06) 0%, rgba(15,27,41,0) 50%, rgba(20,184,166,0.04) 100%);
+}
+.discard-zone { transition: background 0.15s; }
+.discard-zone:hover { background: rgba(255,255,255,0.06); }
