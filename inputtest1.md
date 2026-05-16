@@ -1,0 +1,91 @@
+{
+  "global": {
+    "game_type": "四川麻将",
+    "notes": "川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。",
+    "analysis_date": "2026-05-16 21:34:52",
+    "image_path": "",
+    "user_messages": "用户手动提问：我现在是万子缺门，手牌里有三万、四万、二索、五筒、六万、八筒、三索的碰牌，还有一万、一万、二万、五万、八万的暗牌。对面玩家有一个明杠，是一万的一万杠。请帮我分析一下我的牌型和听牌情况。",
+    "status": "my_hand",
+    "discard_tile": "",
+    "personal_river_visible": false,
+    "river_tiles": {
+      "all_tiles": [
+        "二万", "二万", "二万", "四万", "五万", "五万", "六万", "六万", "七万", "八万", "八万", 
+        "五索", "七索", "七索", "二筒", "二筒", "二筒", "五筒", "八筒"
+      ]
+    }
+  },
+  "players": {
+    "my_hand": {
+      "dingque": "万",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [
+          "一索", "一索", "三索", "四索", "五索", "七索", "八索", "九索", "四索",
+          "三筒", "四筒", "四筒", "七筒", "八筒"
+        ],
+        "bright_tiles": []
+      }
+    },
+    "left_hand": {
+      "dingque": "万",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [],
+        "bright_tiles": [
+          {
+            "type": "peng",
+            "values": ["六条", "六条", "六条"]
+          }
+        ]
+      }
+    },
+    "right_hand": {
+      "dingque": "筒",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [],
+        "bright_tiles": []
+      }
+    },
+    "across_hand": {
+      "dingque": null,
+      "hu_info": {
+        "is_hu": true,
+        "hu_tile": "二筒",
+        "hu_type": "dianpao",
+        "provider": "right_hand"
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [],
+        "bright_tiles": [
+          {
+            "type": "gang",
+            "gangType": "ming_gang",
+            "gangTarget": "my_hand",
+            "values": ["九万", "九万", "九万", "九万"]
+          }
+        ]
+      }
+    }
+  }
+}

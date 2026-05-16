@@ -2,7 +2,7 @@
 //  常量
 // ═══════════════════════════════════════
 const SUIT_NAME = { W: '万', T: '筒', B: '索' };
-const API_URL = '/api/analyze';  // 后端接口地址，按需修改
+const API_URL = 'http://192.168.30.124:8765';  // 后端接口地址，按需修改
 const SUIT_COLOR = { W: '#ef4444', T: '#3b82f6', B: '#10b981' };
 const SUIT_BG = { W: 'bg-red-500', T: 'bg-blue-500', B: 'bg-emerald-500' };
 const SUIT_BORDER = { W: 'border-red-400', T: 'border-blue-400', B: 'border-emerald-400' };

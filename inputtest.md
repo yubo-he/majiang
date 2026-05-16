@@ -6,7 +6,7 @@
     "notes": "川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。",
     "analysis_date": "2026-05-16 21:00:00",
     "image_path": "",
-    "back_up1": null,
+    "user_messages": null,
     "status": "my_hand",
     "discard_tile": ""
   },
@@ -66,7 +66,7 @@
     "notes": "川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。",
     "analysis_date": "2026-05-16 21:34:52",
     "image_path": "",
-    "back_up1": "room_88888",
+    "user_messages": "room_88888",
     "status": "my_hand",
     "discard_tile": ""
   },
@@ -156,7 +156,7 @@
     "notes": "川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。",
     "analysis_date": "2026-05-16 22:15:30",
     "image_path": "",
-    "back_up1": "room_88888",
+    "user_messages": "room_88888",
     "status": "across_hand",
     "discard_tile": "九索"
   },
