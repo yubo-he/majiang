@@ -29,7 +29,7 @@ const state = {
   swapOut: [], swapDir: null, swapIn: [],
   history: [],
   dealer: null,
-  currentTurn: null,  // 当前轮到谁出牌（已摸未打状态），取值: 'me'/'left'/'right'/'across' 或 null
+  currentTurn: 'me',  // 当前轮到谁出牌，取值: 'me'/'left'/'right'/'across'，始终有一人
 };
 
 // 获取或创建警告弹窗
@@ -133,7 +133,6 @@ function validateTileCount(player, actionLabel) {
   }
   return true;
 }
-
 // ═══════════════════════════════════════
 //  前后端数据转换
 // ═══════════════════════════════════════
@@ -343,24 +342,29 @@ function updateDealerVisuals() {
 }
 
 function cycleTurn() {
-  const order = ['me', 'left', 'right', 'across', null];
+  const order = ['me', 'left', 'right', 'across'];
   const idx = order.indexOf(state.currentTurn);
   state.currentTurn = order[(idx + 1) % order.length];
-  updatePhaseBadge();
-  showToast(state.currentTurn ? `当前回合：${PLAYER_LABEL[state.currentTurn]}` : '已清除回合标记');
+  renderTable();
+  showToast(`当前回合：${PLAYER_LABEL[state.currentTurn]}`);
 }
 
 function updatePhaseBadge() {
   const badge = document.getElementById('phase-badge');
   if (!badge) return;
-  if (state.currentTurn) {
-    const label = PLAYER_LABEL[state.currentTurn] === '我方' ? '我' : PLAYER_LABEL[state.currentTurn];
-    badge.textContent = `轮到${label}`;
-    badge.className = badge.className.replace(/border-teal-700 bg-teal-950\/60 text-teal-400/, 'border-amber-700 bg-amber-950/60 text-amber-400');
-  } else {
-    badge.textContent = '对局中';
-    badge.className = badge.className.replace(/border-amber-700 bg-amber-950\/60 text-amber-400/, 'border-teal-700 bg-teal-950\/60 text-teal-400');
-  }
+  const label = PLAYER_LABEL[state.currentTurn] === '我方' ? '我' : PLAYER_LABEL[state.currentTurn];
+  badge.textContent = `轮到${label}`;
+  badge.className = badge.className.replace(/border-teal-700 bg-teal-950\/60 text-teal-400/, 'border-amber-700 bg-amber-950/60 text-amber-400');
+}
+
+function updateTurnVisuals() {
+  ['me','left','right','across'].forEach(p => {
+    const el = document.getElementById(`turn-${p}`);
+    if (el) el.classList.add('hidden');
+  });
+  if (!state.currentTurn) return;
+  const turnEl = document.getElementById(`turn-${state.currentTurn}`);
+  if (turnEl) turnEl.classList.remove('hidden');
 }
 
 function renderTable() {
@@ -374,6 +378,7 @@ function renderTable() {
   renderOpponentHand('right','right');
   ['me','left','right','across'].forEach(updateBadge);
   updateDealerVisuals();
+  updateTurnVisuals();
   updatePhaseBadge();
 }
 
@@ -470,7 +475,7 @@ function renderMyHand() {
     }
     el.appendChild(outer);
   });
-  document.getElementById('hand-count-label').textContent = `(${state.myHand.length}张)`;
+  document.getElementById('hand-count-label').textContent = `(${getPlayerTotalTiles('me')}张)`;
 
   if (!inSwap) {
     const confirmArea = document.getElementById('confirm-area');
@@ -735,6 +740,7 @@ function doAction(action) {
   if(action==='dealer') {
     state.dealer = state.dealer === p ? null : p;
     updateDealerVisuals();
+    updateTurnVisuals();
     closeAction();
     showToast(state.dealer ? `${PLAYER_LABEL[p]} 上庄` : '已取消庄家');
     currentActionPlayer = null;
@@ -1199,6 +1205,17 @@ function analyzePhoto() {
 // ═══════════════════════════════════════
 //  AI 分析
 // ═══════════════════════════════════════
+const mockAdvice = {
+  primary: '打 7条', confidence: '把握极高', benefitScore: 85, riskScore: 10,
+  warnings: ['下家连续打出万字，极大概率在做筒子清一色！','场上4万、6万已出尽，5万成为绝张断头牌，请防暗对。'],
+  reasons: [
+    {title:'清理缺门', detail:'规则强制必须缺一门，优先打出最后的条子。'},
+    {title:'保留核心搭子', detail:'手中有3、4、5、6筒的高联络张，保留可最大化听牌面。'},
+    {title:'安全性极高', detail:'7条在场上已经是熟张，放铳概率接近0。'},
+  ],
+  alternatives: [{card:'1万', gap:'收益差 -25分（纯防守降级）'}]
+};
+
 async function requestAI() {
   const btn = document.getElementById('ai-btn');
   const origText = btn.textContent;
@@ -1402,7 +1419,7 @@ function initMockData() {
     state.players[p].melds = [];
   });
   state.handCounts = { left: 13, right: 13, across: 13 };
-  state.currentTurn = null;
+  state.currentTurn = 'me';
   state.dealer = null;
   state.myHand = [];
   state.history = [];

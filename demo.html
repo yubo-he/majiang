@@ -39,11 +39,12 @@
         <!-- 对家 (上方) -->
         <div class="absolute top-[5%] left-0 right-0 flex flex-col items-center gap-1 z-10">
           <div class="relative flex gap-[2px]" id="across-hand">
-            <div class="absolute top-1/2 -translate-y-1/2 left-full ml-3 z-20">
+            <div class="absolute top-1/2 -translate-y-1/2 left-full ml-3 z-20 flex flex-col items-center gap-1">
               <button id="avatar-across" onclick="openActionModal('across')" class="relative w-10 h-10 bg-[#1e293b] rounded-lg shadow-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
                 <span class="text-[11px] font-bold text-slate-200">对家</span>
                 <span id="badge-across" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
               </button>
+              <span id="turn-across" class="hidden text-[9px] font-bold text-teal-400 bg-teal-950/60 border border-teal-700 rounded px-1.5 py-0.5 whitespace-nowrap">当前回合</span>
             </div>
           </div>
           <div id="across-melds" class="flex gap-1.5"></div>
@@ -52,11 +53,12 @@
         <!-- 上家 (左方) -->
         <div class="absolute left-[5%] top-0 bottom-0 flex flex-row items-center gap-1 z-10">
           <div class="relative flex flex-col gap-[2px]" id="left-hand">
-            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20">
+            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
               <button id="avatar-left" onclick="openActionModal('left')" class="relative w-10 h-10 bg-[#1e293b] rounded-lg shadow-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
                 <span class="text-[11px] font-bold text-slate-200">上家</span>
                 <span id="badge-left" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
               </button>
+              <span id="turn-left" class="hidden text-[9px] font-bold text-teal-400 bg-teal-950/60 border border-teal-700 rounded px-1.5 py-0.5 whitespace-nowrap">当前回合</span>
             </div>
           </div>
           <div id="left-melds" class="flex flex-col gap-1"></div>
@@ -65,11 +67,12 @@
         <!-- 下家 (右方) -->
         <div class="absolute right-[5%] top-0 bottom-0 flex flex-row-reverse items-center gap-1 z-10">
           <div class="relative flex flex-col gap-[2px]" id="right-hand">
-            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20">
+            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
               <button id="avatar-right" onclick="openActionModal('right')" class="relative w-10 h-10 bg-[#1e293b] rounded-lg shadow-lg border border-slate-600 flex items-center justify-center hover:bg-slate-700 transition">
                 <span class="text-[11px] font-bold text-slate-200">下家</span>
                 <span id="badge-right" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
               </button>
+              <span id="turn-right" class="hidden text-[9px] font-bold text-teal-400 bg-teal-950/60 border border-teal-700 rounded px-1.5 py-0.5 whitespace-nowrap">当前回合</span>
             </div>
           </div>
           <div id="right-melds" class="flex flex-col gap-1"></div>
@@ -108,10 +111,11 @@
               <span id="badge-me" class="absolute -top-2 -right-2 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black shadow bg-slate-600 text-slate-200 border-slate-500">?</span>
             </button>
             <span class="text-xs font-bold text-slate-300">我方手牌</span>
+            <span id="turn-me" class="hidden text-[9px] font-bold text-teal-400 bg-teal-950/60 border border-teal-700 rounded px-1.5 py-0.5">当前回合</span>
             <span class="text-[10px] text-slate-500" id="hand-count-label">(10张)</span>
           </div>
           <div class="flex gap-1.5">
-            <button onclick="undoLast()" class="text-[10px] flex items-center gap-1 text-slate-400 bg-slate-900 px-2 py-1.5 rounded hover:bg-slate-700 transition border border-slate-700">
+            <button onclick="undoLast()" class="hidden text-[10px] flex items-center gap-1 text-slate-400 bg-slate-900 px-2 py-1.5 rounded hover:bg-slate-700 transition border border-slate-700">
               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.9"/></svg>
               撤销
             </button>
