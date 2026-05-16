@@ -28,7 +28,7 @@ const state = {
   swapOut: [], swapDir: null, swapIn: [],
   history: [],
   dealer: null,
-  currentTurn: null,  // 当前轮到谁出牌（已摸未打状态），取值: 'me'/'left'/'right'/'across' 或 null
+  currentTurn: 'me',  // 当前轮到谁出牌，取值: 'me'/'left'/'right'/'across'，始终有一人
 };
 
 // 获取或创建警告弹窗
@@ -129,6 +129,37 @@ function validateTileCount(player, actionLabel) {
     const label = player === 'me' ? '我方' : PLAYER_LABEL[player];
     showWarning(`${label} 当前总牌数 ${total} 张，超过预期上限 ${max} 张（${actionLabel}）。请检查录入数据。`);
     return false;
+  }
+  return true;
+}
+
+// 获取某玩家实际手牌上限（基础13张 + 杠数补偿）
+function getActualHandLimit(player) {
+  return 13 + getPlayerKongCount(player);
+}
+
+// AI分析前校验所有玩家总牌数（手牌 + 副露）
+function validateHandCountsForAI() {
+  const players = ['me', 'left', 'right', 'across'];
+
+  for (const p of players) {
+    const totalCount = getPlayerTotalTiles(p);
+    const actualLimit = getActualHandLimit(p);
+
+    let expected;
+    if (state.currentTurn === 'me') {
+      // 我的回合：我 = 我的上限 + 1，其他 = 对应上限
+      expected = (p === 'me') ? actualLimit + 1 : actualLimit;
+    } else {
+      // 其他家的回合：我 = 我的上限，其他 = 对应上限
+      expected = actualLimit;
+    }
+
+    if (totalCount !== expected) {
+      const label = p === 'me' ? '我方' : PLAYER_LABEL[p];
+      showWarning(`${label} 总牌数 ${totalCount} 张（手牌+副露），预期 ${expected} 张（实际上限 ${actualLimit}）。请检查录入数据。`);
+      return false;
+    }
   }
   return true;
 }
@@ -270,24 +301,29 @@ function updateDealerVisuals() {
 }
 
 function cycleTurn() {
-  const order = ['me', 'left', 'right', 'across', null];
+  const order = ['me', 'left', 'right', 'across'];
   const idx = order.indexOf(state.currentTurn);
   state.currentTurn = order[(idx + 1) % order.length];
-  updatePhaseBadge();
-  showToast(state.currentTurn ? `当前回合：${PLAYER_LABEL[state.currentTurn]}` : '已清除回合标记');
+  renderTable();
+  showToast(`当前回合：${PLAYER_LABEL[state.currentTurn]}`);
 }
 
 function updatePhaseBadge() {
   const badge = document.getElementById('phase-badge');
   if (!badge) return;
-  if (state.currentTurn) {
-    const label = PLAYER_LABEL[state.currentTurn] === '我方' ? '我' : PLAYER_LABEL[state.currentTurn];
-    badge.textContent = `轮到${label}`;
-    badge.className = badge.className.replace(/border-teal-700 bg-teal-950\/60 text-teal-400/, 'border-amber-700 bg-amber-950/60 text-amber-400');
-  } else {
-    badge.textContent = '对局中';
-    badge.className = badge.className.replace(/border-amber-700 bg-amber-950\/60 text-amber-400/, 'border-teal-700 bg-teal-950\/60 text-teal-400');
-  }
+  const label = PLAYER_LABEL[state.currentTurn] === '我方' ? '我' : PLAYER_LABEL[state.currentTurn];
+  badge.textContent = `轮到${label}`;
+  badge.className = badge.className.replace(/border-teal-700 bg-teal-950\/60 text-teal-400/, 'border-amber-700 bg-amber-950/60 text-amber-400');
+}
+
+function updateTurnVisuals() {
+  ['me','left','right','across'].forEach(p => {
+    const el = document.getElementById(`turn-${p}`);
+    if (el) el.classList.add('hidden');
+  });
+  if (!state.currentTurn) return;
+  const turnEl = document.getElementById(`turn-${state.currentTurn}`);
+  if (turnEl) turnEl.classList.remove('hidden');
 }
 
 function renderTable() {
@@ -301,6 +337,7 @@ function renderTable() {
   renderOpponentHand('right','right');
   ['me','left','right','across'].forEach(updateBadge);
   updateDealerVisuals();
+  updateTurnVisuals();
   updatePhaseBadge();
 }
 
@@ -658,6 +695,7 @@ function doAction(action) {
   if(action==='dealer') {
     state.dealer = state.dealer === p ? null : p;
     updateDealerVisuals();
+    updateTurnVisuals();
     closeAction();
     showToast(state.dealer ? `${PLAYER_LABEL[p]} 上庄` : '已取消庄家');
     currentActionPlayer = null;
@@ -1134,6 +1172,11 @@ const mockAdvice = {
 };
 
 function requestAI() {
+  if (!state.currentTurn) {
+    showWarning('请先设置当前回合（点击顶部"轮到XX"标签切换），确保有且只有一人处于当前回合。');
+    return;
+  }
+  if (!validateHandCountsForAI()) return;
   const btn = document.getElementById('ai-btn');
   btn.textContent = '分析中...'; btn.disabled=true; btn.style.opacity='0.7';
   setTimeout(() => {
@@ -1205,7 +1248,7 @@ function initMockData() {
     state.players[p].melds = [];
   });
   state.handCounts = { left: 13, right: 13, across: 13 };
-  state.currentTurn = null;
+  state.currentTurn = 'me';
   state.dealer = null;
   state.myHand = [];
   state.history = [];
