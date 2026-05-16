@@ -21,6 +21,11 @@
         <span id="phase-badge" onclick="cycleTurn()" class="badge-phase text-[10px] font-bold border rounded px-2 py-0.5 text-teal-400 border-teal-700 bg-teal-950/60 cursor-pointer hover:brightness-125 transition" title="点击切换当前回合玩家">对局中</span>
         <!-- 牌源清晰/模糊切换 -->
         <button id="river-visibility-btn" onclick="toggleRiverVisibility()" class="text-[10px] font-bold border rounded px-2 py-0.5 text-cyan-400 border-cyan-700 bg-cyan-950/60 cursor-pointer hover:brightness-125 transition" title="切换牌源可见性">牌源清晰</button>
+        <!-- 加载示例牌局 -->
+        <button onclick="initFromSample()" class="text-[10px] font-bold border rounded px-2 py-0.5 text-amber-400 border-amber-700 bg-amber-950/60 cursor-pointer hover:brightness-125 transition" title="加载内置示例牌局">示例</button>
+        <!-- 加载本地JSON文件 -->
+        <input type="file" id="json-file-input" accept=".json,application/json" class="hidden" onchange="handleJsonFile(event)" />
+        <button onclick="document.getElementById('json-file-input').click()" class="text-[10px] font-bold border rounded px-2 py-0.5 text-violet-400 border-violet-700 bg-violet-950/60 cursor-pointer hover:brightness-125 transition" title="加载本地JSON文件模拟后端返回">加载</button>
         <!-- 拍照按钮 -->
         <button onclick="openCameraInput()" class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-700 transition border border-slate-700" title="拍照录入">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -31,6 +36,11 @@
         </button>
       </div>
     </header>
+
+    <!-- 公共河牌区：仅牌源模糊时显示（照片识别出的无法分辨归属的初始出牌） -->
+    <div id="public-river" class="hidden mx-2 mt-1 px-3 py-2 bg-slate-900/40 border border-dashed border-slate-600/50 rounded-lg flex flex-wrap gap-[2px] justify-center content-start min-h-[72px]">
+      <span id="public-river-placeholder" class="text-[10px] text-slate-500 w-full text-center">初始河牌（无法分辨谁打出）</span>
+    </div>
 
     <!-- 牌桌区域 -->
     <div class="bg-[#0b1220] border-x border-slate-700/60 px-2 pt-4 pb-0 flex flex-col items-center shadow-inner">
@@ -165,6 +175,16 @@
       </div>
       </div>
 
+      <!-- 用户自定义提问 -->
+      <div class="bg-[#0f1b29] rounded-xl border border-slate-700/60 p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs font-bold text-slate-300">向AI提问</span>
+          <span class="text-[10px] text-slate-500">（可选，输入自定义问题获得针对性建议）</span>
+        </div>
+        <textarea id="user-message-input" placeholder="例如：上家刚出了五筒，我手上有四筒和六筒，打哪张胡牌几率更大？" rows="2"
+          class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-300 placeholder-slate-600 resize-none focus:outline-none focus:border-teal-600 transition"></textarea>
+      </div>
+
       <!-- AI 分析按钮 -->
       <button onclick="requestAI()" id="ai-btn" class="w-full py-3 rounded-xl font-black text-sm text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 border border-teal-500/50 shadow-lg transition">⚡ 请求 AI 分析出牌建议</button>
     </div>
@@ -252,6 +272,25 @@
         <button id="dingque-btn-W" onclick="confirmDingque('W')" class="flex-1 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-red-400 font-bold text-lg hover:border-red-500 hover:bg-red-950/30 transition">万</button>
         <button id="dingque-btn-T" onclick="confirmDingque('T')" class="flex-1 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-blue-400 font-bold text-lg hover:border-blue-500 hover:bg-blue-950/30 transition">筒</button>
         <button id="dingque-btn-B" onclick="confirmDingque('B')" class="flex-1 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-emerald-400 font-bold text-lg hover:border-emerald-500 hover:bg-emerald-950/30 transition">条</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：公共河牌认领 -->
+  <div id="modal-claim" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="if(event.target===this)closeClaim()">
+    <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-bold text-slate-200">这张牌是谁打出的？</span>
+        <button onclick="closeClaim()" class="text-slate-400 hover:text-slate-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="claim-tile-preview" class="flex justify-center mb-3"></div>
+      <div class="grid grid-cols-4 gap-2">
+        <button onclick="confirmClaim('me')" class="py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-slate-200 font-bold text-sm hover:border-teal-500 hover:bg-teal-950/30 transition">我方</button>
+        <button onclick="confirmClaim('left')" class="py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-slate-200 font-bold text-sm hover:border-teal-500 hover:bg-teal-950/30 transition">上家</button>
+        <button onclick="confirmClaim('right')" class="py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-slate-200 font-bold text-sm hover:border-teal-500 hover:bg-teal-950/30 transition">下家</button>
+        <button onclick="confirmClaim('across')" class="py-3 rounded-xl border-2 border-slate-700 bg-slate-800 text-slate-200 font-bold text-sm hover:border-teal-500 hover:bg-teal-950/30 transition">对家</button>
       </div>
     </div>
   </div>

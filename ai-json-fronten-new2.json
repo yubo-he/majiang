@@ -1,0 +1,184 @@
+{
+  "analysis_timestamp": "2026-05-16 21:34:52",
+  "game_stage": "中期",
+  "turn_type": "my_turn",
+  "hand_analysis": {
+    "suit_distribution": {
+      "万子": 0,
+      "筒子": 0,
+      "索子": 14
+    },
+    "missing_suit": "筒子",
+    "missing_suit_status": "已清完",
+    "hand_structure": {
+      "triplets": [
+        {
+          "tile": "九索",
+          "count": 3,
+          "status": "暗刻"
+        },
+        {
+          "tile": "七索",
+          "count": 3,
+          "status": "明刻"
+        }
+      ],
+      "pairs": [
+        {
+          "tile": "一索",
+          "count": 2
+        },
+        {
+          "tile": "三索",
+          "count": 2
+        }
+      ],
+      "sequences_potential": [
+        {
+          "tiles": "一二三索",
+          "status": "可成型",
+          "needs": "无"
+        },
+        {
+          "tiles": "三四五索",
+          "status": "可成型",
+          "needs": "无"
+        }
+      ],
+      "isolated_tiles": [
+        {
+          "tile": "八索",
+          "reason": "邻张 7 索已明刻，9 索暗刻，6 索河内 3 张，靠张极难"
+        }
+      ]
+    },
+    "total_tiles": 14
+  },
+  "hand_direction": "清一色（索子）",
+  "river_analysis": {
+    "suosu": {
+      "一索": 2,
+      "三索": 1,
+      "四索": 1,
+      "六索": 3,
+      "八索": 1
+    },
+    "tongzi": {
+      "一筒": 2,
+      "二筒": 2,
+      "四筒": 1,
+      "八筒": 1
+    },
+    "wanzi": {
+      "二万": 3,
+      "三万": 1,
+      "四万": 1,
+      "五万": 2,
+      "六万": 3,
+      "七万": 1,
+      "八万": 1,
+      "万": 1
+    },
+    "key_insights": [
+      "六索已绝张（河内 3 张 + 手牌 0 张 = 剩余 1 张）",
+      "七索已明刻（剩余 1 张）",
+      "九索手牌暗刻（剩余 1 张）",
+      "八索靠张能力极差（6/7/9 均稀缺）"
+    ]
+  },
+  "opponent_info": {
+    "left_hand": {
+      "dingque": "万",
+      "exposed": "无",
+      "threat_level": "中"
+    },
+    "right_hand": {
+      "dingque": "万",
+      "exposed": "五筒碰",
+      "threat_level": "中"
+    },
+    "across_hand": {
+      "dingque": "筒",
+      "exposed": "一万碰",
+      "threat_level": "低"
+    },
+    "summary": "两家缺万，一家缺筒。索子为主要竞争花色，需注意索子生张风险。"
+  },
+  "tenpai_progress": {
+    "current_shanten": "2-3 向听",
+    "target": "清一色",
+    "efficiency": "中",
+    "blocked_tiles": [
+      "六索",
+      "七索",
+      "九索"
+    ]
+  },
+  "recommendation": {
+    "primary_choice": "打八索",
+    "secondary_choice": "打一索",
+    "strategies": [
+      {
+        "strategy_id": 1,
+        "strategy_name": "打八索 - 效率优先",
+        "action": "打出八索",
+        "reasoning": "八索邻张 6/7/9 均被占用或绝张，靠张价值几乎为零。保留一索对子可作为将头，保留三四五索顺子雏形。",
+        "direction": "清一色优化",
+        "advantages": [
+          "移除废牌，提升手牌整体效率",
+          "保留一索对子作为将头候选",
+          "三四五索搭子完整，进张面广"
+        ],
+        "risks": [
+          "八索虽废，但若对手听 8 索单钓则有点炮风险（概率低）",
+          "手牌仍需 2-3 巡才能听牌"
+        ],
+        "risk_level": "低",
+        "reward_level": "高",
+        "win_probability": "40%-50%",
+        "expected_value": "高收益中概率"
+      },
+      {
+        "strategy_id": 2,
+        "strategy_name": "打一索 - 破坏对子求顺",
+        "action": "打出一索",
+        "reasoning": "若认为对子过多阻碍顺子成型，可拆一索对子，保留 123 索顺子，将三索对子作为将头。",
+        "direction": "清一色速听",
+        "advantages": [
+          "固定 123 索顺子",
+          "三索对子作将，结构更清晰",
+          "减少依赖对子碰牌，门清可能性增加"
+        ],
+        "risks": [
+          "减少一对将头候选，若三索被碰则无将",
+          "一索河内已出 2 张，剩余 2 张，拆对略显浪费",
+          "八索仍留手中成为废张"
+        ],
+        "risk_level": "中",
+        "reward_level": "中",
+        "win_probability": "35%-45%",
+        "expected_value": "中收益中概率"
+      }
+    ],
+    "reasoning": "八索因邻张 6/7/9 均被控制（6 索河内 3 张，7 索明刻，9 索暗刻），已成为绝对废张。保留一索对子可作将，且 123 索可成顺。打八索是牌理上的最优解。",
+    "decision_matrix": {
+      "激进型玩家": "打八索 - 清一色",
+      "稳健型玩家": "打八索 - 清一色",
+      "观察型玩家": "打八索 - 观察下家反应"
+    }
+  },
+  "strategy_references": [
+    "S-05 断头牌效应：6 索已绝，8 索靠张价值暴跌",
+    "S-08 清一色雷达：手牌全索，对手会警惕索子生张",
+    "牌效原则：先打孤张，再打边张，保留搭子与对子"
+  ],
+  "summary": "本局手牌已达成清一色基础，缺门已清。核心问题是处理废张 8 索。因 6/7/9 索均被占用，8 索无靠张价值，建议优先打出。手牌仍有 2-3 向听，需耐心进张，注意索子生张放铳风险。",
+  "metadata": {
+    "sample_input": "/home/free/dataset/input2/input.json",
+    "sample_output": "/home/free/dataset/output/mahjong_output_sample.json",
+    "real_input": "/home/free/dataset/input2/input2.json",
+    "input_strategy": "/home/free/dataset/output/mahjong_strategy.md",
+    "analysis_timestamp": "2026-05-16T21:31:07.885794",
+    "model": "qwen3.5-plus"
+  }
+}
