@@ -174,6 +174,14 @@ function meldToBright(meld, player) {
   if (meld.type === 'pong') {
     return { type: 'peng', values };
   }
+  if (meld.type === 'hu') {
+    return {
+      type: 'hu',
+      huType: meld.fromPlayer ? 'dian_pao' : 'self_draw',
+      huTarget: meld.fromPlayer ? PLAYER_KEY_MAP[meld.fromPlayer] : null,
+      values
+    };
+  }
   const gangTypeMap = { kong_ming: 'ming_gang', kong_an: 'an_gang', kong_bu: 'bu_gang' };
   const gangTarget = meld.type === 'kong_ming'
     ? (meld.fromDir ? PLAYER_KEY_MAP[meld.fromDir] : null)
@@ -321,6 +329,20 @@ function renderMeldGroup(meld, size='sm', direction='up') {
     gap.style.cssText = direction==='left'||direction==='right' ? 'height:4px' : 'width:4px';
     wrap.appendChild(gap);
     wrap.appendChild(createTileEl(tile, size, direction));
+  } else if(meld.type === 'hu') {
+    // 胡牌：显示胡的牌 + 点炮来源标识
+    const tileEl = createTileEl(tile, size, direction);
+    wrap.appendChild(tileEl);
+    if (meld.fromPlayer) {
+      // 点炮：显示来源方向小标
+      const indicator = document.createElement('div');
+      const isize = size === 'md' ? 14 : 10;
+      indicator.style.cssText = `width:${isize}px;height:${isize*1.4}px;background:linear-gradient(135deg,#0f766e,#115e59);border:1px solid #0d9488;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:${isize-3}px;color:#5eead4;font-weight:bold;margin-left:1px;`;
+      const labelMap = { left: '上', right: '下', across: '对' };
+      indicator.textContent = labelMap[meld.fromPlayer] || '?';
+      indicator.title = `${PLAYER_LABEL[meld.fromPlayer]}点炮`;
+      wrap.appendChild(indicator);
+    }
   }
   return wrap;
 }
@@ -448,10 +470,15 @@ function renderMelds(player, direction, containerId) {
     const group = renderMeldGroup(meld, player==='me'?'md':'sm', direction);
     group.addEventListener('dblclick', (e) => {
       e.stopPropagation();
-      state.players[player].melds.splice(idx, 1);
+      const removed = state.players[player].melds.splice(idx, 1)[0];
+      // 胡牌撤销：点炮时恢复牌到来源玩家出牌堆
+      if (removed && removed.type === 'hu' && removed.fromPlayer) {
+        state.players[removed.fromPlayer].discards.push({type: removed.tiles[0].type, value: removed.tiles[0].value});
+      }
       state.history.push({type:'undoMeld', player, meld, idx});
       renderTable();
-      showToast(`已撤回${PLAYER_LABEL[player]}的${meld.type==='pong'?'碰':'杠'}`);
+      const label = meld.type==='pong'?'碰':meld.type==='hu'?'胡':(meld.type==='kong_an'?'暗杠':(meld.type==='kong_ming'?'明杠':(meld.type==='kong_bu'?'补杠':'杠')));
+      showToast(`已撤回${PLAYER_LABEL[player]}的${label}`);
     });
     group.style.cursor = 'pointer';
     group.title = '双击撤回';
@@ -604,6 +631,10 @@ function undoLast() {
     const fromPlayer = meld.fromPlayer || meld.fromDir;
     if ((meld.type === 'pong' || meld.type === 'kong_ming') && fromPlayer) {
       state.players[fromPlayer].discards.push({type: tile.type, value: tile.value});
+    }
+    // 胡牌撤销：点炮时恢复牌到来源玩家出牌堆
+    if (meld.type === 'hu' && meld.fromPlayer) {
+      state.players[meld.fromPlayer].discards.push({type: tile.type, value: tile.value});
     }
   } else if(last.type==='dingque') {
     state.players[last.player].dingque = last.prev;
@@ -771,7 +802,7 @@ function doAction(action) {
     currentActionPlayer = null;
     return;
   }
-  if(action==='win') { showToast(`${PLAYER_LABEL[p]} 胡牌！`); currentActionPlayer=null; return; }
+  if(action==='win') { closeAction(); openWinTilePicker(p); return; }
   if(action==='pong') { openMeldPicker(p, 'pong'); currentActionPlayer=null; return; }
   if(action==='kong') { openKongTypeModal(p); currentActionPlayer=null; return; }
   if(action==='kong_bu') { openBuGangPicker(p); currentActionPlayer=null; return; }
@@ -1000,6 +1031,72 @@ function openMeldPicker(player, type) {
 }
 
 // ═══════════════════════════════════════
+//  弹窗：胡牌流程
+// ═══════════════════════════════════════
+let winPlayer = null;
+
+function openWinTilePicker(player) {
+  winPlayer = player;
+  pickerMode = 'win';
+  pickerMaxCount = 1;
+  pickerSelected = [];
+  document.getElementById('picker-title').textContent = `${PLAYER_LABEL[player]} 胡牌 — 选胡的牌`;
+  document.getElementById('picker-hint').textContent = '选1张';
+  document.getElementById('picker-confirm-btn').onclick = function() {
+    if(!pickerSelected.length) { showToast('请选一张牌'); return; }
+    const tile = pickerSelected[0];
+    closePicker();
+    openWinFromModal(winPlayer, tile);
+  };
+  openPickerModal();
+}
+
+function openWinFromModal(player, tile) {
+  document.getElementById('kong-from-title').textContent = `${PLAYER_LABEL[player]} 胡牌 — 谁点炮？`;
+  const container = document.getElementById('kong-from-options');
+  container.innerHTML = '';
+
+  // 自摸按钮
+  const selfBtn = document.createElement('button');
+  selfBtn.className = 'py-3 rounded-xl bg-teal-800 border border-teal-600 text-teal-200 font-bold text-sm hover:bg-teal-700 transition';
+  selfBtn.textContent = '自摸';
+  selfBtn.onclick = () => { closeKongFrom(); doWin(player, tile, player); };
+  container.appendChild(selfBtn);
+
+  // 其他玩家按钮（含我方，别家可能胡我打出的牌）
+  ['me','left','right','across'].filter(p => p !== player).forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm hover:bg-slate-700 hover:border-amber-500 transition';
+    btn.textContent = PLAYER_LABEL[p];
+    btn.onclick = () => { closeKongFrom(); doWin(player, tile, p); };
+    container.appendChild(btn);
+  });
+
+  document.getElementById('modal-kong-from').classList.remove('hidden');
+}
+
+function doWin(player, tile, fromPlayer) {
+  const isSelfDraw = fromPlayer === player;
+
+  // 非自摸：从点炮玩家的出牌堆移除该牌
+  if (!isSelfDraw) {
+    const srcDiscards = state.players[fromPlayer].discards;
+    const srcIdx = srcDiscards.findIndex(t => t.type === tile.type && t.value === tile.value);
+    if (srcIdx !== -1) {
+      srcDiscards.splice(srcIdx, 1);
+    }
+  }
+
+  // 将胡牌记录为 meld（自摸时 fromPlayer 为 null）
+  state.players[player].melds.push({type:'hu', tiles:[{...tile}], fromPlayer: isSelfDraw ? null : fromPlayer});
+  state.history.push({type:'meld', player});
+
+  renderTable(); renderMyHand();
+  const label = isSelfDraw ? '自摸' : `${PLAYER_LABEL[fromPlayer]}点炮`;
+  showToast(`${PLAYER_LABEL[player]} 胡牌！${label} — ${tile.value}${SUIT_NAME[tile.type]}`);
+}
+
+// ═══════════════════════════════════════
 //  弹窗：定缺
 // ═══════════════════════════════════════
 function closeDingque() { document.getElementById('modal-dingque').classList.add('hidden'); }
@@ -1093,16 +1190,18 @@ function renderPickerGrid() {
       const key = `${suit}${v}`;
       let baseUsed = used[key] || 0;
 
-      // 编辑手牌/碰杠模式：自己手牌不算已用（合规检查在确认时单独做）
-      if(pickerMode==='handEdit' || pickerMode==='meld') {
+      // 编辑手牌/碰杠/胡牌模式：自己手牌不算已用（合规检查在确认时单独做）
+      if(pickerMode==='handEdit' || pickerMode==='meld' || pickerMode==='win') {
         const inMyHand = state.myHand.filter(t=>t.type===suit&&t.value===v).length;
         baseUsed = baseUsed - inMyHand;
       }
 
       const inSel = pickerSelected.filter(t=>t.type===suit&&t.value===v).length;
       const totalUsedWithSel = baseUsed + inSel;
-      const remaining = 4 - baseUsed;  // 总共还能选几张
-      const canAdd = (4 - totalUsedWithSel) > 0 && pickerSelected.length < pickerMaxCount;
+      // 胡牌模式不限制牌的使用次数（胡牌可能来自已打出的牌）
+      const isWinMode = pickerMode === 'win';
+      const remaining = isWinMode ? 4 : (4 - baseUsed);
+      const canAdd = isWinMode ? (pickerSelected.length < pickerMaxCount) : ((4 - totalUsedWithSel) > 0 && pickerSelected.length < pickerMaxCount);
 
       const btn = document.createElement('button');
       const isActive = inSel > 0;
@@ -1129,11 +1228,12 @@ function togglePickerTile(suit, v) {
   const used = getTileUsed();
   const key = `${suit}${v}`;
   let baseUsed = used[key]||0;
-  if(pickerMode==='handEdit' || pickerMode==='meld') {
+  if(pickerMode==='handEdit' || pickerMode==='meld' || pickerMode==='win') {
     baseUsed -= state.myHand.filter(t=>t.type===suit&&t.value===v).length;
   }
   const totalUsed = baseUsed + inSel;
-  const canAddMore = totalUsed < 4 && pickerSelected.length < pickerMaxCount;
+  const isWinMode = pickerMode === 'win';
+  const canAddMore = isWinMode ? (pickerSelected.length < pickerMaxCount) : (totalUsed < 4 && pickerSelected.length < pickerMaxCount);
 
   if(canAddMore) {
     // 可以继续添加
