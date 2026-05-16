@@ -19,6 +19,8 @@
       </div>
       <div class="flex items-center gap-2">
         <span id="phase-badge" onclick="cycleTurn()" class="badge-phase text-[10px] font-bold border rounded px-2 py-0.5 text-teal-400 border-teal-700 bg-teal-950/60 cursor-pointer hover:brightness-125 transition" title="点击切换当前回合玩家">对局中</span>
+        <!-- 牌源清晰/模糊切换 -->
+        <button id="river-visibility-btn" onclick="toggleRiverVisibility()" class="text-[10px] font-bold border rounded px-2 py-0.5 text-cyan-400 border-cyan-700 bg-cyan-950/60 cursor-pointer hover:brightness-125 transition" title="切换牌源可见性">牌源清晰</button>
         <!-- 拍照按钮 -->
         <button onclick="openCameraInput()" class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-700 transition border border-slate-700" title="拍照录入">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>

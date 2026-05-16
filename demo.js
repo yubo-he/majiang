@@ -30,6 +30,7 @@ const state = {
   history: [],
   dealer: null,
   currentTurn: 'me',  // 当前轮到谁出牌，取值: 'me'/'left'/'right'/'across'，始终有一人
+  personalRiverVisible: true,  // 牌源清晰/牌源模糊
 };
 
 // 获取或创建警告弹窗
@@ -202,22 +203,31 @@ function buildRequestPayload() {
       ? state.myHand.map(t => tileToChinese(t))
       : [];
     const brightTiles = state.players[p].melds.map(m => meldToBright(m, p));
-    const riverTiles = state.players[p].discards.map(t => tileToChinese(t));
+    const discards = state.players[p].discards.map(t => tileToChinese(t));
 
     return {
       dingque: dq ? DINGQUE_MAP[dq] : null,
+      hu_info: {
+        is_hu: false,
+        hu_tile: null,
+        hu_type: null,
+        provider: null
+      },
       hand_tiles: {
         total_count: total,
         dark_tiles: darkTiles,
         bright_tiles: brightTiles
       },
-      river_tiles: {
-        all_tiles: riverTiles
+      personal_river_tiles: {
+        all_tiles: state.personalRiverVisible ? discards : []
       }
     };
   }
 
   const status = state.currentTurn ? PLAYER_KEY_MAP[state.currentTurn] : '';
+  const allRiverTiles = ['me','left','right','across'].flatMap(p =>
+    state.players[p].discards.map(t => tileToChinese(t))
+  );
 
   return {
     global: {
@@ -225,9 +235,13 @@ function buildRequestPayload() {
       notes: '川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。',
       analysis_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
       image_path: '',
-      back_up1: null,
+      user_messages: '',
       status,
-      discard_tile: ''
+      discard_tile: '',
+      personal_river_visible: state.personalRiverVisible,
+      river_tiles: {
+        all_tiles: state.personalRiverVisible ? [] : allRiverTiles
+      }
     },
     players: {
       my_hand: playerSection('me'),
@@ -394,6 +408,15 @@ function cycleTurn() {
   state.currentTurn = order[(idx + 1) % order.length];
   renderTable();
   showToast(`当前回合：${PLAYER_LABEL[state.currentTurn]}`);
+}
+
+function toggleRiverVisibility() {
+  state.personalRiverVisible = !state.personalRiverVisible;
+  const btn = document.getElementById('river-visibility-btn');
+  if (btn) {
+    btn.textContent = state.personalRiverVisible ? '牌源清晰' : '牌源模糊';
+  }
+  showToast(state.personalRiverVisible ? '已切换为牌源清晰（可分辨各家出牌）' : '已切换为牌源模糊（无法分辨各家出牌）');
 }
 
 function updatePhaseBadge() {
@@ -1552,6 +1575,7 @@ function initMockData() {
   state.history = [];
   state.selectedHandIdx = null;
   state.swapOut = []; state.swapIn = []; state.swapDir = null;
+  state.personalRiverVisible = true;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
