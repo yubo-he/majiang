@@ -165,41 +165,6 @@
 
     <!-- AI 建议展示区 -->
     <div id="advice-section" class="bg-[#0b1220] border border-slate-700/60 rounded-b-2xl px-3 pt-3 pb-5 flex flex-col gap-3">
-      <div id="warning-box" class="bg-orange-950/40 border border-orange-900/60 rounded-xl p-3 shadow-sm hidden">
-        <div class="flex items-start gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="text-orange-500 shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <div id="warning-content" class="flex flex-col gap-1.5"></div>
-        </div>
-      </div>
-      <div id="advice-card" class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg hidden">
-        <div class="px-4 py-3 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
-          <div>
-            <div class="flex items-center gap-1 mb-1 text-teal-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#2dd4bf" stroke="#2dd4bf" stroke-width="1"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              <span class="text-[10px] font-bold uppercase tracking-wider">AI 实时决策</span>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span id="advice-primary" class="text-2xl font-black text-white">—</span>
-              <span id="advice-confidence" class="text-[10px] font-bold bg-teal-900/50 text-teal-300 border border-teal-800 px-1.5 py-0.5 rounded-sm">把握极高</span>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1.5 w-24">
-            <div><div class="flex justify-between mb-0.5"><span class="text-[10px] text-slate-400">进攻收益</span><span id="benefit-score" class="text-[10px] font-bold text-red-400">—</span></div><div class="w-full bg-slate-800 rounded-full h-1.5"><div id="benefit-bar" class="bg-gradient-to-r from-red-600 to-red-400 h-1.5 rounded-full transition-all duration-700" style="width:0%"></div></div></div>
-            <div><div class="flex justify-between mb-0.5"><span class="text-[10px] text-slate-400">防守风险</span><span id="risk-score" class="text-[10px] font-bold text-blue-400">—</span></div><div class="w-full bg-slate-800 rounded-full h-1.5"><div id="risk-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-1.5 rounded-full transition-all duration-700" style="width:0%"></div></div></div>
-          </div>
-        </div>
-        <div class="p-4">
-          <h3 class="text-[11px] font-bold text-slate-400 mb-3 flex items-center gap-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            决策逻辑拆解
-          </h3>
-          <div id="reasons-list" class="flex flex-col gap-3 mb-4"></div>
-          <div class="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50">
-            <div class="text-[10px] text-slate-500 mb-2 font-medium">备选降级方案</div>
-            <div id="alternatives-list" class="flex flex-col gap-1.5"></div>
-          </div>
-        </div>
-      </div>
       <div id="advice-placeholder" class="flex flex-col items-center justify-center py-8 gap-2 text-slate-600">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <p class="text-xs">录入牌局信息后点击"请求 AI 分析"</p>
@@ -207,8 +172,7 @@
       </div>
     </div>
   </div>
-
-  <!-- 弹窗：通用选牌器 -->
+	  <!-- 弹窗：通用选牌器 -->
   <div id="modal-picker" class="modal-overlay hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center" onclick="closePickerIfOutside(event)">
     <div class="modal-box w-full max-w-[420px] bg-[#0b1220] border-t border-slate-700 rounded-t-2xl p-4 pb-8">
       <div class="flex justify-between items-center mb-3">

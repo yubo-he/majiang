@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════
 //  常量
 // ═══════════════════════════════════════
-const SUIT_NAME = { W: '万', T: '筒', B: '条' };
+const SUIT_NAME = { W: '万', T: '筒', B: '索' };
+const API_URL = '/api/analyze';  // 后端接口地址，按需修改
 const SUIT_COLOR = { W: '#ef4444', T: '#3b82f6', B: '#10b981' };
 const SUIT_BG = { W: 'bg-red-500', T: 'bg-blue-500', B: 'bg-emerald-500' };
 const SUIT_BORDER = { W: 'border-red-400', T: 'border-blue-400', B: 'border-emerald-400' };
@@ -131,6 +132,78 @@ function validateTileCount(player, actionLabel) {
     return false;
   }
   return true;
+}
+
+// ═══════════════════════════════════════
+//  前后端数据转换
+// ═══════════════════════════════════════
+const CN_NUM = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const PLAYER_KEY_MAP = { me: 'my_hand', left: 'left_hand', right: 'right_hand', across: 'across_hand' };
+const DINGQUE_MAP = { W: '万', T: '筒', B: '索' };
+
+function tileToChinese(tile) {
+  return `${CN_NUM[tile.value]}${SUIT_NAME[tile.type]}`;
+}
+
+function meldToBright(meld, player) {
+  const values = meld.tiles.map(t => tileToChinese(t));
+  if (meld.type === 'pong') {
+    return { type: 'peng', values };
+  }
+  const gangTypeMap = { kong_ming: 'ming_gang', kong_an: 'an_gang', kong_bu: 'bu_gang' };
+  const gangTarget = meld.type === 'kong_ming'
+    ? (meld.fromDir ? PLAYER_KEY_MAP[meld.fromDir] : null)
+    : null;
+  return {
+    type: 'gang',
+    gangType: gangTypeMap[meld.type],
+    gangTarget,
+    values
+  };
+}
+
+function buildRequestPayload() {
+  function playerSection(p) {
+    const dq = state.players[p].dingque;
+    const total = getPlayerTotalTiles(p);
+    const darkTiles = p === 'me'
+      ? state.myHand.map(t => tileToChinese(t))
+      : [];
+    const brightTiles = state.players[p].melds.map(m => meldToBright(m, p));
+    const riverTiles = state.players[p].discards.map(t => tileToChinese(t));
+
+    return {
+      dingque: dq ? DINGQUE_MAP[dq] : null,
+      hand_tiles: {
+        total_count: total,
+        dark_tiles: darkTiles,
+        bright_tiles: brightTiles
+      },
+      river_tiles: {
+        all_tiles: riverTiles
+      }
+    };
+  }
+
+  const status = state.currentTurn ? PLAYER_KEY_MAP[state.currentTurn] : '';
+
+  return {
+    global: {
+      game_type: '四川麻将',
+      notes: '川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。',
+      analysis_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      image_path: '',
+      back_up1: null,
+      status,
+      discard_tile: ''
+    },
+    players: {
+      my_hand: playerSection('me'),
+      left_hand: playerSection('left'),
+      right_hand: playerSection('right'),
+      across_hand: playerSection('across')
+    }
+  };
 }
 
 // ═══════════════════════════════════════
@@ -315,8 +388,12 @@ function renderDiscards(player, direction) {
       e.stopPropagation();
       e.preventDefault();
       state.players[player].discards.splice(idx, 1);
+      if (player === 'me') {
+        state.myHand.push({type: tile.type, value: tile.value});
+        state.myHand.sort((a,b) => {const so={W:0,T:1,B:2}; return so[a.type]-so[b.type]||a.value-b.value;});
+      }
       state.history.push({type:'undoDiscard', player, tile, idx});
-      renderTable();
+      renderTable(); renderMyHand();
       showToast(`已撤回${PLAYER_LABEL[player]}出牌：${tile.value}${SUIT_NAME[tile.type]}`);
     });
     // 单击也阻止冒泡，防止误触发容器的 onclick
@@ -1120,63 +1197,183 @@ function analyzePhoto() {
 }
 
 // ═══════════════════════════════════════
-//  AI 分析（Mock）
+//  AI 分析
 // ═══════════════════════════════════════
-const mockAdvice = {
-  primary: '打 7条', confidence: '把握极高', benefitScore: 85, riskScore: 10,
-  warnings: ['下家连续打出万字，极大概率在做筒子清一色！','场上4万、6万已出尽，5万成为绝张断头牌，请防暗对。'],
-  reasons: [
-    {title:'清理缺门', detail:'规则强制必须缺一门，优先打出最后的条子。'},
-    {title:'保留核心搭子', detail:'手中有3、4、5、6筒的高联络张，保留可最大化听牌面。'},
-    {title:'安全性极高', detail:'7条在场上已经是熟张，放铳概率接近0。'},
-  ],
-  alternatives: [{card:'1万', gap:'收益差 -25分（纯防守降级）'}]
-};
-
-function requestAI() {
+async function requestAI() {
   const btn = document.getElementById('ai-btn');
-  btn.textContent = '分析中...'; btn.disabled=true; btn.style.opacity='0.7';
-  setTimeout(() => {
-    renderAdvice(mockAdvice);
-    btn.textContent = '⚡ 请求 AI 分析出牌建议'; btn.disabled=false; btn.style.opacity='1';
-    document.getElementById('advice-section').scrollIntoView({behavior:'smooth',block:'start'});
-  }, 1200);
+  const origText = btn.textContent;
+  btn.textContent = '分析中...'; btn.disabled = true; btn.style.opacity = '0.7';
+
+  try {
+    const payload = buildRequestPayload();
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    renderAIResponse(data);
+    document.getElementById('advice-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error('AI 分析请求失败', err);
+    showToast('AI 分析请求失败，请确认后端服务已启动');
+  } finally {
+    btn.textContent = origText; btn.disabled = false; btn.style.opacity = '1';
+  }
 }
 
-function renderAdvice(advice) {
-  document.getElementById('advice-placeholder').classList.add('hidden');
-  const warnBox = document.getElementById('warning-box');
-  const warnContent = document.getElementById('warning-content');
-  if(advice.warnings&&advice.warnings.length) {
-    warnContent.innerHTML = '';
-    advice.warnings.forEach(w => { const p=document.createElement('p'); p.className='text-xs text-orange-400 leading-relaxed'; p.textContent=w; warnContent.appendChild(p); });
-    warnBox.classList.remove('hidden');
+function renderAIResponse(data) {
+  const section = document.getElementById('advice-section');
+  section.innerHTML = '';
+
+  // ── 手牌概况 ──
+  if (data.current_hand) {
+    const h = data.current_hand;
+    section.appendChild(buildHandOverview(h));
   }
-  document.getElementById('advice-card').classList.remove('hidden');
-  document.getElementById('advice-primary').textContent = advice.primary;
-  document.getElementById('advice-confidence').textContent = advice.confidence;
-  document.getElementById('benefit-score').textContent = advice.benefitScore;
-  document.getElementById('risk-score').textContent = advice.riskScore;
-  setTimeout(() => {
-    document.getElementById('benefit-bar').style.width = advice.benefitScore+'%';
-    document.getElementById('risk-bar').style.width = advice.riskScore+'%';
-  }, 100);
-  const reasonsList = document.getElementById('reasons-list');
-  reasonsList.innerHTML = '';
-  advice.reasons.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'flex items-start gap-2';
-    div.innerHTML = `<div style="width:6px;height:6px;border-radius:50%;background:#64748b;margin-top:6px;flex-shrink:0"></div><p class="text-xs text-slate-300 leading-relaxed"><span class="font-bold text-slate-200">${r.title}：</span>${r.detail}</p>`;
-    reasonsList.appendChild(div);
+
+  // ── 最终推荐 ──
+  if (data.final_recommendation) {
+    section.appendChild(buildFinalRec(data.final_recommendation));
+  }
+
+  // ── 策略列表 ──
+  if (data.strategy_recommendations && data.strategy_recommendations.length) {
+    section.appendChild(buildStrategyList(data.strategy_recommendations));
+  }
+
+  // ── 牌效分析 ──
+  if (data.tile_efficiency_analysis) {
+    section.appendChild(buildEfficiency(data.tile_efficiency_analysis));
+  }
+
+  // ── 对手分析 ──
+  if (data.opponent_analysis) {
+    section.appendChild(buildOpponent(data.opponent_analysis));
+  }
+
+  // ── 总结 ──
+  if (data.summary) {
+    section.appendChild(buildSummary(data.summary));
+  }
+}
+
+function sectionBox(title, icon) {
+  const div = document.createElement('div');
+  div.className = 'bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg mb-3';
+  div.innerHTML = `<div class="px-4 py-2.5 bg-slate-800/50 border-b border-slate-800 flex items-center gap-2">
+    <span class="text-xs">${icon||''}</span>
+    <span class="text-[11px] font-bold text-slate-300">${title}</span>
+  </div>`;
+  div._body = document.createElement('div');
+  div._body.className = 'p-3';
+  div.appendChild(div._body);
+  return div;
+}
+
+function buildHandOverview(h) {
+  const box = sectionBox('当前手牌', '🀄');
+  const types = [
+    { key: 'wanzi', label: '万', color: '#ef4444' },
+    { key: 'tongzi', label: '筒', color: '#3b82f6' },
+    { key: 'suosu', label: '索', color: '#10b981' }
+  ];
+  box._body.innerHTML = `
+    <div class="flex gap-3 mb-2 flex-wrap">
+      ${types.map(t => `<span class="text-xs" style="color:${t.color}">${t.label}：${(h[t.key]||[]).join(' ')}</span>`).join('')}
+    </div>
+    <p class="text-[10px] text-slate-500">共 ${h.total_tiles} 张</p>`;
+  return box;
+}
+
+function buildFinalRec(rec) {
+  const box = sectionBox('AI 推荐', '🎯');
+  box._body.innerHTML = `
+    <div class="flex items-baseline gap-2 mb-2">
+      <span class="text-xl font-black text-amber-400">${rec.primary_choice || '—'}</span>
+      ${rec.secondary_choice ? `<span class="text-xs text-slate-500">备选：${rec.secondary_choice}</span>` : ''}
+    </div>
+    <p class="text-xs text-slate-400 leading-relaxed mb-2">${rec.reasoning || ''}</p>`;
+  if (rec.decision_matrix) {
+    const dm = rec.decision_matrix;
+    box._body.innerHTML += `
+      <div class="grid grid-cols-3 gap-1.5 mt-2">
+        ${Object.entries(dm).map(([k, v]) => `
+          <div class="bg-slate-800 rounded-lg p-2 text-center">
+            <div class="text-[10px] text-slate-500">${k}</div>
+            <div class="text-[10px] text-slate-300 font-bold">${v}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+  return box;
+}
+
+function buildStrategyList(strategies) {
+  const box = sectionBox(`策略分析 (${strategies.length})`, '📋');
+  strategies.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'bg-slate-800 rounded-lg p-3 mb-2 last:mb-0';
+    const riskColor = { '高': 'text-red-400', '中': 'text-amber-400', '低': 'text-green-400', '中低': 'text-green-400' };
+    card.innerHTML = `
+      <div class="flex justify-between items-start mb-2">
+        <span class="text-sm font-bold text-slate-200">${s.strategy_id}. ${s.strategy_name}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 ${riskColor[s.risk_level]||'text-slate-400'}">${s.risk_level||'?'}风险</span>
+      </div>
+      <p class="text-xs text-slate-300 mb-2"><span class="text-amber-400 font-bold">${s.action}</span> — ${s.reasoning}</p>
+      <div class="grid grid-cols-3 gap-2 text-[10px] mb-2">
+        <div><span class="text-slate-500">方向</span><br><span class="text-slate-300">${s.direction||'—'}</span></div>
+        <div><span class="text-slate-500">收益</span><br><span class="text-slate-300">${s.reward_level||'—'}</span></div>
+        <div><span class="text-slate-500">胜率</span><br><span class="text-slate-300">${s.win_probability||'—'}</span></div>
+      </div>
+      ${s.advantages ? `<div class="mb-1">${s.advantages.map(a => `<div class="text-[10px] text-green-400/80">✓ ${a}</div>`).join('')}</div>` : ''}
+      ${s.risks ? `<div class="mb-1">${s.risks.map(r => `<div class="text-[10px] text-red-400/80">✗ ${r}</div>`).join('')}</div>` : ''}
+      ${s.target_tiles ? `<p class="text-[10px] text-slate-500">目标牌：${s.target_tiles.join('、')}</p>` : ''}
+    `;
+    box._body.appendChild(card);
   });
-  const altList = document.getElementById('alternatives-list');
-  altList.innerHTML = '';
-  advice.alternatives.forEach(alt => {
-    const div = document.createElement('div');
-    div.className = 'flex justify-between items-center text-xs';
-    div.innerHTML = `<span class="text-slate-300 bg-slate-800 px-2 py-1 rounded border border-slate-700">${alt.card}</span><span class="text-slate-500 text-[10px]">${alt.gap}</span>`;
-    altList.appendChild(div);
-  });
+  return box;
+}
+
+function buildEfficiency(e) {
+  const box = sectionBox('牌效分析', '📊');
+  box._body.innerHTML = `
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div class="bg-slate-800 rounded-lg p-2"><span class="text-slate-500">当前向听</span><br><span class="text-slate-200 font-bold">${e.current_shanten||'—'}</span></div>
+      <div class="bg-slate-800 rounded-lg p-2"><span class="text-slate-500">平胡向听</span><br><span class="text-slate-200 font-bold">${e.if_pinghu||'—'}</span></div>
+      ${e.if_qingyise ? `<div class="bg-slate-800 rounded-lg p-2"><span class="text-slate-500">清一色向听</span><br><span class="text-slate-200 font-bold">${e.if_qingyise}</span></div>` : ''}
+    </div>
+    ${e.best_draw_tiles ? `<p class="text-[10px] text-slate-500 mt-2">最佳进张：${e.best_draw_tiles.join('、')}</p>` : ''}
+    ${e.worst_draw_tiles ? `<p class="text-[10px] text-slate-600 mt-1">最差进张：${e.worst_draw_tiles.join('、')}</p>` : ''}
+  `;
+  return box;
+}
+
+function buildOpponent(o) {
+  const box = sectionBox('对手分析', '👁');
+  const items = [];
+  for (const [key, info] of Object.entries(o)) {
+    const labelMap = { opposite_player: '对家', left_player: '上家', right_player: '下家' };
+    const dangerColor = { '高': 'text-red-400', '中': 'text-amber-400', '低': 'text-green-400' };
+    items.push(`
+      <div class="bg-slate-800 rounded-lg p-2 mb-1 last:mb-0">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-slate-300">${labelMap[key]||key}</span>
+          <span class="text-[10px] ${dangerColor[info.danger_level]||'text-slate-400'}">危险度：${info.danger_level||'?'}</span>
+        </div>
+        ${info.known_tiles ? `<p class="text-[10px] text-slate-500 mt-1">已知：${info.known_tiles.join('、')}</p>` : ''}
+        ${info.potential_hand ? `<p class="text-[10px] text-slate-400">${info.potential_hand}</p>` : ''}
+        ${info.safe_tiles ? `<p class="text-[10px] text-green-400/70 mt-1">安全牌：${info.safe_tiles.join('、')}</p>` : ''}
+      </div>`);
+  }
+  box._body.innerHTML = items.join('');
+  return box;
+}
+
+function buildSummary(text) {
+  const box = sectionBox('总结', '💡');
+  box._body.innerHTML = `<p class="text-xs text-slate-300 leading-relaxed">${text}</p>`;
+  return box;
 }
 
 // ═══════════════════════════════════════
