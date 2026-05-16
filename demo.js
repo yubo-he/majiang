@@ -430,7 +430,7 @@ function renderMyHand() {
     }
     el.appendChild(outer);
   });
-  document.getElementById('hand-count-label').textContent = `(${state.myHand.length}张)`;
+  document.getElementById('hand-count-label').textContent = `(${getPlayerTotalTiles('me')}张)`;
 
   if (!inSwap) {
     const confirmArea = document.getElementById('confirm-area');
