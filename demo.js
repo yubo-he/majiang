@@ -133,6 +133,31 @@ function validateTileCount(player, actionLabel) {
   }
   return true;
 }
+// 获取某玩家实际手牌上限（基础13张 + 杠数补偿，不含当前回合摸牌+1）
+function getActualHandLimit(player) {
+  return 13 + getPlayerKongCount(player);
+}
+
+// AI分析前校验所有玩家总牌数（手牌 + 副露）是否合法
+function validateHandCountsForAI() {
+  const players = ['me', 'left', 'right', 'across'];
+
+  for (const p of players) {
+    const total = getPlayerTotalTiles(p);
+    const actualLimit = getActualHandLimit(p);
+
+    // 正常情况手牌为13张，摸牌后手牌为14张，每有1个杠手牌数量永久加1
+    // 当前回合玩家摸牌未打，预期 = 实际上限 + 1；其他玩家预期 = 实际上限
+    const expected = (state.currentTurn === p) ? actualLimit + 1 : actualLimit;
+
+    if (total !== expected) {
+      const label = p === 'me' ? '我方' : PLAYER_LABEL[p];
+      showWarning(`${label} 总牌数 ${total} 张（手牌+副露），预期 ${expected} 张（基础${actualLimit}张${state.currentTurn === p ? '，当前回合摸牌+1' : ''}）。请检查录入数据。`);
+      return false;
+    }
+  }
+  return true;
+}
 // ═══════════════════════════════════════
 //  前后端数据转换
 // ═══════════════════════════════════════
@@ -1217,6 +1242,8 @@ const mockAdvice = {
 };
 
 async function requestAI() {
+  if (!validateHandCountsForAI()) return;
+
   const btn = document.getElementById('ai-btn');
   const origText = btn.textContent;
   btn.textContent = '分析中...'; btn.disabled = true; btn.style.opacity = '0.7';
