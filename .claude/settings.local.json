@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const fs = require\\('fs'\\); const html = fs.readFileSync\\('demo.html', 'utf8'\\); const scriptMatch = html.match\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/\\); if \\(scriptMatch\\) { try { new Function\\(scriptMatch[1]\\); console.log\\('OK'\\); } catch\\(e\\) { console.log\\('ERR:', e.message\\); } }\")"
+    ]
+  }
+}
