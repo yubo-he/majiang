@@ -2,7 +2,7 @@
 //  常量
 // ═══════════════════════════════════════
 const SUIT_NAME = { W: '万', T: '筒', B: '索' };
-const API_URL = 'http://192.168.30.124:8765';  // 后端接口地址，按需修改
+const API_URL = 'http://192.168.30.137:8765';  // 后端接口地址，按需修改
 
 // ═══════════════════════════════════════
 //  模拟数据开关（联调时全部改为 false）
@@ -179,13 +179,15 @@ function validateHandCountsForAI() {
     const total = getPlayerTotalTiles(p);
     const actualLimit = getActualHandLimit(p);
 
-    // 正常情况手牌为13张，摸牌后手牌为14张，每有1个杠手牌数量永久加1
-    // 当前回合玩家摸牌未打，预期 = 实际上限 + 1；其他玩家预期 = 实际上限
-    const expected = (state.currentTurn === p) ? actualLimit + 1 : actualLimit;
+    // 如果是我的回合：我默认还未打出牌，当前回合玩家期望 = 实际上限 + 1
+    // 如果是其他家的回合：默认该玩家已打出牌，所有玩家期望 = 实际上限
+    const isMyTurn = (state.currentTurn === 'me');
+    const expected = (isMyTurn && state.currentTurn === p) ? actualLimit + 1 : actualLimit;
 
     if (total !== expected) {
       const label = p === 'me' ? '我方' : PLAYER_LABEL[p];
-      showWarning(`${label} 总牌数 ${total} 张（手牌+副露），预期 ${expected} 张（基础${actualLimit}张${state.currentTurn === p ? '，当前回合摸牌+1' : ''}）。请检查录入数据。`);
+      const extra = (isMyTurn && state.currentTurn === p) ? '，当前回合摸牌+1' : '';
+      showWarning(`${label} 总牌数 ${total} 张（手牌+副露），预期 ${expected} 张（基础${actualLimit}张${extra}）。请检查录入数据。`);
       return false;
     }
   }
@@ -1804,10 +1806,20 @@ async function requestAI() {
       const formData = new FormData();
       formData.append('file', blob, 'game_state.json');
 
-      const resp = await fetch(API_URL + '/analyze/file', {
-        method: 'POST',
-        body: formData
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5分钟超时
+
+      let resp;
+      try {
+        resp = await fetch(API_URL + '/analyze/file', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
         throw new Error(errData.message || `HTTP ${resp.status}`);
@@ -1820,7 +1832,11 @@ async function requestAI() {
     document.getElementById('advice-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     console.error('AI 分析请求失败', err);
-    showToast('AI 分析请求失败，请确认后端服务已启动');
+    if (err.name === 'AbortError') {
+      showToast('AI 分析请求超时（后端处理时间较长），请稍后重试');
+    } else {
+      showToast(`AI 分析请求失败: ${err.message || '请确认后端服务已启动'}`);
+    }
   } finally {
     btn.textContent = origText; btn.disabled = false; btn.style.opacity = '1';
   }
