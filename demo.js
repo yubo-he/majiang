@@ -2152,3 +2152,33 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSwapOut();
   renderSwapIn();
 });
+
+// ═══════════════════════════════════════
+//  二维码 — 手机扫码访问
+// ═══════════════════════════════════════
+function showQRCode() {
+  const modal = document.getElementById('qr-modal');
+  const qrContainer = document.getElementById('qr-code');
+  const qrUrlEl = document.getElementById('qr-url');
+  if (!modal || !qrContainer || !qrUrlEl) return;
+
+  const url = window.location.href;
+  qrUrlEl.textContent = url;
+  qrContainer.innerHTML = '';
+
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(qrContainer, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  } else {
+    const img = document.createElement('img');
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+    img.width = 200;
+    img.height = 200;
+    qrContainer.appendChild(img);
+  }
+  modal.classList.remove('hidden');
+}
+
+function hideQRCode(event) {
+  if (event && event.target !== document.getElementById('qr-modal')) return;
+  document.getElementById('qr-modal').classList.add('hidden');
+}

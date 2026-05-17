@@ -28,6 +28,10 @@
         <button onclick="document.getElementById('json-file-input').click()" class="text-[10px] font-bold border rounded px-2 py-0.5 text-violet-400 border-violet-700 bg-violet-950/60 cursor-pointer hover:brightness-125 transition" title="加载本地JSON文件模拟后端返回">加载</button>
         <!-- 初始化牌堆 -->
         <button onclick="initGame()" class="text-[10px] font-bold border rounded px-2 py-0.5 text-green-400 border-green-700 bg-green-950/60 cursor-pointer hover:brightness-125 transition" title="初始化牌堆：我方0张，其他家13张，录入手牌后选择庄家">初始化</button>
+        <!-- 二维码按钮 -->
+        <button onclick="showQRCode()" class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-700 transition border border-slate-700" title="手机扫码访问">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
         <!-- 拍照按钮 -->
         <button onclick="openCameraInput()" class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-700 transition border border-slate-700" title="拍照录入">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -323,6 +327,17 @@
     </div>
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="demo.js"></script>
+
+<!-- 二维码弹窗 -->
+<div id="qr-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden" onclick="hideQRCode(event)">
+  <div class="bg-[#0f172a] border border-slate-600 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl" onclick="event.stopPropagation()">
+    <h3 class="text-sm font-bold text-gray-200">手机扫码访问</h3>
+    <div id="qr-code" class="bg-white p-3 rounded-xl"></div>
+    <p id="qr-url" class="text-xs text-slate-400 break-all text-center max-w-[250px]"></p>
+    <button onclick="hideQRCode()" class="text-xs text-slate-500 hover:text-slate-300 transition">关闭</button>
+  </div>
+</div>
 </body>
 </html>
