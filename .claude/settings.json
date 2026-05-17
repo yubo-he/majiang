@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(netsh advfirewall *)",
+      "Bash(netstat -ano)"
+    ]
+  }
+}

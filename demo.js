@@ -2,7 +2,7 @@
 //  常量
 // ═══════════════════════════════════════
 const SUIT_NAME = { W: '万', T: '筒', B: '索' };
-const API_URL = 'http://192.168.30.137:8765';  // 后端接口地址，按需修改
+const API_URL = 'http://10.130.108.180:8765';  // 后端接口地址，按需修改
 
 // ═══════════════════════════════════════
 //  模拟数据开关（联调时全部改为 false）
@@ -1801,19 +1801,27 @@ async function requestAI() {
       renderAIResponse(MOCK_AI_DATA);
     } else {
       const payload = buildRequestPayload();
-      const jsonStr = JSON.stringify(payload, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const formData = new FormData();
-      formData.append('file', blob, 'game_state.json');
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5分钟超时
+      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
 
       let resp;
       try {
-        resp = await fetch(API_URL + '/analyze/file', {
+        // 第1步：保存当前牌局到本地 frontend_json_backen_sample_blur.json
+        resp = await fetch('/api/save-state', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        if (!resp.ok) {
+          const e = await resp.json().catch(() => ({}));
+          throw new Error('保存牌局失败: ' + (e.error || resp.status));
+        }
+
+        // 第2步：触发 curl.exe 用本地文件请求 AI 后端，读取 output.json 并解码返回
+        resp = await fetch('/api/proxy-analyze', {
+          method: 'POST',
           signal: controller.signal
         });
       } finally {
@@ -1822,10 +1830,9 @@ async function requestAI() {
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.message || `HTTP ${resp.status}`);
+        throw new Error(errData.error || errData.message || `HTTP ${resp.status}`);
       }
       const result = await resp.json();
-      // 后端返回格式: { analysis: {...}, message: "...", status: "success" }
       const data = result.analysis || result;
       renderAIResponse(data);
     }
@@ -2166,15 +2173,12 @@ function showQRCode() {
   qrUrlEl.textContent = url;
   qrContainer.innerHTML = '';
 
-  if (typeof QRCode !== 'undefined') {
-    new QRCode(qrContainer, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
-  } else {
-    const img = document.createElement('img');
-    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-    img.width = 200;
-    img.height = 200;
-    qrContainer.appendChild(img);
-  }
+  const img = document.createElement('img');
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+  img.width = 200;
+  img.height = 200;
+  img.onerror = function() { qrContainer.innerHTML = '<p class="text-xs text-red-400">二维码加载失败，请直接复制上方地址</p>'; };
+  qrContainer.appendChild(img);
   modal.classList.remove('hidden');
 }
 
