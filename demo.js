@@ -451,6 +451,40 @@ function initFromSample() {
   loadGameState(SAMPLE_GAME_DATA);
 }
 
+function initGame() {
+  // 重置所有玩家状态
+  ['me','left','right','across'].forEach(p => {
+    state.players[p].dingque = null;
+    state.players[p].discards = [];
+    state.players[p].melds = [];
+  });
+  // 对手初始13张暗牌
+  state.opponentHands = {
+    left: Array(13).fill(null).map(() => ({ ...SENTINEL })),
+    right: Array(13).fill(null).map(() => ({ ...SENTINEL })),
+    across: Array(13).fill(null).map(() => ({ ...SENTINEL }))
+  };
+  // 我方初始0张
+  state.myHand = [];
+  state.currentTurn = 'me';
+  state.dealer = null;
+  state.history = [];
+  state.selectedHandIdx = null;
+  state.swapOut = []; state.swapIn = []; state.swapDir = null;
+  state.personalRiverVisible = true;
+  state.publicRiverTiles = [];
+
+  // 更新牌源按钮文字
+  const btn = document.getElementById('river-visibility-btn');
+  if (btn) btn.textContent = '牌源清晰';
+
+  renderTable();
+  renderMyHand();
+  renderSwapOut();
+  renderSwapIn();
+  showToast('牌堆已初始化（我方0张，其他家各13张）。请录入手牌13张，再选择庄家。');
+}
+
 // 加载本地 JSON 文件（模拟后端返回牌桌数据）
 function handleJsonFile(event) {
   const file = event.target.files[0];
@@ -956,9 +990,9 @@ function quickDiscard(idx) {
   state.history.push({type:'discard', player:'me', tile});
   state.selectedHandIdx = null;
   renderMyHand(); renderTable();
-  advanceTurn();
+  renderMyHand(); renderTable();
   validateTileCount('me', '快速出牌');
-  showToast(`快速出牌：${tile.value}${SUIT_NAME[tile.type]} → 轮到${PLAYER_LABEL[state.currentTurn]}`);
+  showToast(`快速出牌：${tile.value}${SUIT_NAME[tile.type]}`);
 }
 
 function confirmDiscard() {
@@ -968,9 +1002,8 @@ function confirmDiscard() {
   state.history.push({type:'discard', player:'me', tile});
   state.selectedHandIdx = null;
   renderMyHand(); renderTable();
-  advanceTurn();
   validateTileCount('me', '出牌');
-  showToast(`已出牌：${tile.value}${SUIT_NAME[tile.type]} → 轮到${PLAYER_LABEL[state.currentTurn]}`);
+  showToast(`已出牌：${tile.value}${SUIT_NAME[tile.type]}`);
 }
 
 function undoLast() {
@@ -1132,12 +1165,6 @@ function openActionModal(player) {
   // 上庄按钮
   actions.push({id:'dealer', label: state.dealer===player ? '取消上庄' : '上庄', hover:'hover:bg-yellow-900/40 hover:border-yellow-500 hover:text-yellow-300'});
 
-  // 如果有碰牌，增加补杠选项
-  const pongTiles = state.players[player].melds.filter(m => m.type==='pong');
-  if(pongTiles.length > 0) {
-    actions.splice(2, 0, {id:'kong_bu', label:'补杠', hover:'hover:bg-pink-900/40 hover:border-pink-600 hover:text-pink-300'});
-  }
-
   actions.push({id:'pass', label:'取消', hover:'hover:bg-slate-700', extra:'col-span-2 text-slate-400'});
 
   actions.forEach(a => {
@@ -1280,10 +1307,9 @@ function doBuGang(player, meldIdx) {
 
   state.players[player].melds[meldIdx] = {type:'kong_bu', tiles:[tile,tile,tile,tile], fromDir: meld.fromPlayer || meld.fromDir};
   state.history.push({type:'meld', player});
-  state.currentTurn = player;
   renderTable(); renderMyHand();
   validateTileCount(player, '补杠');
-  showToast(`${PLAYER_LABEL[player]} 补杠：${tile.value}${SUIT_NAME[tile.type]} → 轮到${PLAYER_LABEL[player]}出牌`);
+  showToast(`${PLAYER_LABEL[player]} 补杠：${tile.value}${SUIT_NAME[tile.type]}`);
 }
 
 // ═══════════════════════════════════════
@@ -1356,13 +1382,12 @@ function openMeldPicker(player, type) {
         }
         srcDiscards.splice(srcIdx, 1);
 
-        if (meldPlayer !== 'me') opponentHandRemove(meldPlayer, tile, 2);
+        if (meldPlayer !== 'me') opponentHandRemove(meldPlayer, tile, 3);
         state.players[meldPlayer].melds.push({type:'pong', tiles:[tile,tile,tile], fromPlayer});
         state.history.push({type:'meld', player:meldPlayer});
-        state.currentTurn = meldPlayer;
         renderTable(); renderMyHand();
         validateTileCount(meldPlayer, '碰');
-        showToast(`${PLAYER_LABEL[meldPlayer]} 碰：${tile.value}${SUIT_NAME[tile.type]} (${PLAYER_LABEL[fromPlayer]}打出) → 轮到${PLAYER_LABEL[meldPlayer]}出牌`);
+        showToast(`${PLAYER_LABEL[meldPlayer]} 碰：${tile.value}${SUIT_NAME[tile.type]} (${PLAYER_LABEL[fromPlayer]}打出)`);
       }, meldPlayer);
 
     } else if(meldType==='kong_ming') {
@@ -1388,13 +1413,12 @@ function openMeldPicker(player, type) {
         }
         srcDiscards.splice(srcIdx, 1);
 
-        if (meldPlayer !== 'me') { opponentHandRemove(meldPlayer, tile, 3); opponentHandDraw(meldPlayer, 1); }
+        if (meldPlayer !== 'me') { opponentHandRemove(meldPlayer, tile, 3); opponentHandDraw(meldPlayer, 0); }
         state.players[meldPlayer].melds.push({type:'kong_ming', tiles:[tile,tile,tile,tile], fromDir:fromPlayer});
         state.history.push({type:'meld', player:meldPlayer});
-        state.currentTurn = meldPlayer;
         renderTable(); renderMyHand();
         validateTileCount(meldPlayer, '明杠');
-        showToast(`${PLAYER_LABEL[meldPlayer]} 明杠：${tile.value}${SUIT_NAME[tile.type]} (${PLAYER_LABEL[fromPlayer]}打出) → 轮到${PLAYER_LABEL[meldPlayer]}出牌`);
+        showToast(`${PLAYER_LABEL[meldPlayer]} 明杠：${tile.value}${SUIT_NAME[tile.type]} (${PLAYER_LABEL[fromPlayer]}打出)`);
       }, meldPlayer);
 
     } else if(meldType==='kong_an') {
@@ -1410,13 +1434,12 @@ function openMeldPicker(player, type) {
           if (idx !== -1) state.myHand.splice(idx, 1);
         }
       }
-      if (meldPlayer !== 'me') { opponentHandRemove(meldPlayer, tile, 4); opponentHandDraw(meldPlayer, 1); }
+      if (meldPlayer !== 'me') { opponentHandRemove(meldPlayer, tile, 4); opponentHandDraw(meldPlayer, 0); }
       state.players[meldPlayer].melds.push({type:'kong_an', tiles:[tile,tile,tile,tile]});
       state.history.push({type:'meld', player:meldPlayer});
-      state.currentTurn = meldPlayer;
       closePicker(); renderTable(); renderMyHand();
       validateTileCount(meldPlayer, '暗杠');
-      showToast(`${PLAYER_LABEL[meldPlayer]} 暗杠：${tile.value}${SUIT_NAME[tile.type]} → 轮到${PLAYER_LABEL[meldPlayer]}出牌`);
+      showToast(`${PLAYER_LABEL[meldPlayer]} 暗杠：${tile.value}${SUIT_NAME[tile.type]}`);
 
     }
     document.getElementById('picker-confirm-btn').onclick = confirmPicker;
@@ -1681,14 +1704,14 @@ function confirmPicker() {
       renderMyHand();
     } else {
       pickerSelected.forEach(t => {
+        opponentHandDraw(discardTarget, 1);
         opponentHandRemove(discardTarget, t, 1);
         state.players[discardTarget].discards.push({...t});
         state.history.push({type:'discard', player:discardTarget, tile:t});
       });
     }
     renderTable();
-    advanceTurn();
-    showToast(`已录入${PLAYER_LABEL[discardTarget]}出牌 → 轮到${PLAYER_LABEL[state.currentTurn]}`);
+    showToast(`已录入${PLAYER_LABEL[discardTarget]}出牌`);
   } else if(pickerMode==='swapIn') {
     if(pickerSelected.length!==3) { showToast('换入必须3张'); return; }
     state.swapIn = [...pickerSelected];
