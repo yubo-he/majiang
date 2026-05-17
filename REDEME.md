@@ -16,7 +16,7 @@ json新增字段："recognition_quality": null，含义：AI识别置信度: "hi
 
 前端新增messages窗口填入用户提问的额外messages信息
 
-后端返回调用ai后给用户的建议信息，前端接收逻辑完成，用ai-json-fronten-new1模拟真实后端数据测试完成
+后端返回调用ai后给用户的建议信息，前端接收逻辑完成，用ai-json-fronten-new1模拟真实后端数据测试完成（接入后端后可以直接尝试接收json，不用模拟数据）
 
 上述前后端联调逻辑写入接口文档完成，联调测试指南：API_DOC.md
 

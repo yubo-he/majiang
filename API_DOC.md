@@ -58,16 +58,30 @@ Content-Type: multipart/form-data
 
 ## 接口二：AI 出牌建议
 
-对局中途，用户点击"请求AI分析出牌建议"。前端将当前牌桌上的所有已知信息打包为 JSON 发送给后端，后端返回分析结果和出牌建议。
+对局中途，用户点击"请求AI分析出牌建议"。前端将当前牌桌上的所有已知信息打包为 JSON 文件，通过 multipart/form-data 上传给后端，后端返回分析结果。
 
 ### 请求
 
 ```
-POST /api/analyze
-Content-Type: application/json
+POST /analyze/file
+Content-Type: multipart/form-data
 ```
 
-**请求体** 为完整的 [游戏状态 JSON](#游戏状态-json-格式)。前端通过 `buildRequestPayload()` 收集以下信息并序列化：
+**参数：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `file` | File | 是 | JSON 文件，内容为 [游戏状态 JSON](#游戏状态-json-格式)，文件名建议 `game_state.json` |
+
+前端通过 `buildRequestPayload()` 构建游戏状态 JSON，然后以 `Blob` + `FormData` 形式上传：
+
+```javascript
+const payload = buildRequestPayload();
+const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+const formData = new FormData();
+formData.append('file', blob, 'game_state.json');
+fetch(API_URL + '/analyze/file', { method: 'POST', body: formData });
+```
 
 | 数据来源 | 对应字段 | 说明 |
 |---------|---------|------|
@@ -204,87 +218,34 @@ Content-Type: application/json
 
 **Content-Type:** `application/json`
 
+后端返回的 JSON 包含外层状态信息和内层分析数据：
+
 ```json
 {
-  "analysis_timestamp": "2026-05-16T21:35:10.123456",
-  "game_stage": "中后期",
-  "turn_type": "my_turn",
-  "hand_analysis": {
-    "suit_distribution": { "万子": 0, "筒子": 5, "索子": 9 },
-    "missing_suit": "万子",
-    "missing_suit_status": "已清完",
-    "hand_structure": {
-      "triplets": [{ "tile": "九索", "count": 3, "status": "暗刻" }],
-      "pairs": [{ "tile": "一索", "count": 2 }],
-      "sequences_potential": [
-        { "tiles": "三四五索", "status": "已成顺", "needs": "无" }
-      ],
-      "isolated_tiles": [
-        { "tile": "三筒", "reason": "邻张四筒为对子，三筒成搭效率低" }
-      ]
-    },
-    "total_tiles": 14
-  },
-  "hand_direction": "平胡（混色）",
-  "river_analysis": {
-    "suosu": { "五索": 1, "七索": 2 },
-    "tongzi": { "二筒": 3, "五筒": 1, "八筒": 1 },
-    "wanzi": { "二万": 3, "四万": 1, "五万": 2, "六万": 2, "七万": 1, "八万": 2, "九万": 4 },
-    "key_insights": [
-      "九万已明杠（绝张）",
-      "二筒河内 3 张（剩余 1 张）"
-    ]
-  },
-  "opponent_info": {
-    "left_hand": { "dingque": "万", "exposed": "六索碰", "threat_level": "高" },
-    "right_hand": { "dingque": "筒", "exposed": "无", "threat_level": "中" },
-    "across_hand": { "dingque": "未知", "exposed": "九万明杠", "threat_level": "无" },
-    "summary": "对家已胡牌出局。下家缺万碰六索，索子需求大；上家缺筒，筒子为安全花色。"
-  },
-  "tenpai_progress": {
-    "current_shanten": "1 向听",
-    "target": "平胡",
-    "efficiency": "高",
-    "blocked_tiles": ["二筒", "九万"]
-  },
-  "recommendation": {
-    "primary_choice": "打三筒",
-    "secondary_choice": "打八筒",
-    "strategies": [
-      {
-        "strategy_id": 1,
-        "strategy_name": "打三筒 - 效率与安全平衡",
-        "action": "打出三筒",
-        "reasoning": "三筒为孤张，保留七八筒搭子听牌面更广。上家缺筒，打筒子相对安全。",
-        "direction": "平胡速听",
-        "advantages": ["保留七八筒好搭子", "利用上家缺筒规则避险"],
-        "risks": ["三筒为生张，下家可能听牌"],
-        "risk_level": "中",
-        "reward_level": "高",
-        "win_probability": "50%-60%",
-        "expected_value": "高收益中风险"
-      }
-    ],
-    "reasoning": "上家缺筒，打筒子不会点上家胡...",
-    "decision_matrix": {
-      "激进型玩家": "打三筒 - 保搭子",
-      "稳健型玩家": "打八筒 - 防点炮",
-      "观察型玩家": "打三筒 - 观察下家反应"
-    }
-  },
-  "strategy_references": [
-    "S-08 清一色雷达：下家碰索子，索子危险度上升",
-    "防守原则：缺门花色为绝对安全牌（对上家）"
-  ],
-  "summary": "本局对家已胡，剩余两家竞争。手牌缺门已清，结构良好（1 向听）。建议打三筒保留七八筒搭子，争取快速听牌。",
-  "metadata": {
-    "model": "qwen3.5-plus",
-    "analysis_timestamp": "2026-05-16T21:36:47.952214"
+  "status": "success",
+  "message": "分析完成",
+  "saved_path": "E:\\games4majong\\brain\\brain\\mahjong_analysis_20260517_103509.json",
+  "analysis": {
+    "analysis_timestamp": "2026-05-16T21:35:10.123456",
+    "game_stage": "中后期",
+    "turn_type": "my_turn",
+    "hand_analysis": { "...": "..." },
+    "recommendation": { "...": "..." },
+    "...": "..."
   }
 }
 ```
 
-**响应字段说明：**
+| 外层字段 | 类型 | 说明 |
+|---------|------|------|
+| `status` | string | `"success"` 成功 / `"error"` 失败 |
+| `message` | string | 状态描述（如 `"分析完成"`） |
+| `saved_path` | string | 后端保存分析结果的文件路径 |
+| `analysis` | object | 内层分析数据，结构与下文 [响应字段说明](#响应字段说明) 一致 |
+
+> 前端通过 `result.analysis` 解包后再传给 `renderAIResponse()` 渲染。内层 `analysis` 对象的字段定义与下方"响应字段说明"表完全一致。
+
+**响应字段说明：**（指 `analysis` 内部结构）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -310,6 +271,15 @@ Content-Type: application/json
 | `metadata` | object | 元数据：模型名称 `model`、分析时间戳 `analysis_timestamp` |
 
 > 后端可根据模型能力扩展字段，前端按 key 读取。上述字段名与 `demo.js` 中 `renderAIResponse()` 及示例 JSON 文件（`ai-json-fronten-new1.json`、`ai-json-fronten-new2.json`）对齐。
+
+### 关于编码（Unicode 转义）
+
+后端返回的 JSON 中，中文字符可能以 `\uXXXX` 转义形式出现（如 `早期` 表示 `早期`）。这是合法的 JSON 标准格式，浏览器端 `JSON.parse()` 会**自动将 `\uXXXX` 解码为实际中文字符**，前端渲染无需做任何额外处理。
+
+> 如需在本地查看可读的 JSON（如 `curl -o` 保存的文件），可用 Python 一行转换：
+> ```bash
+> python -c "import json; json.dump(json.load(open('output.json')), open('output_readable.json','w'), ensure_ascii=False, indent=2)"
+> ```
 
 ---
 

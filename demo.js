@@ -7,7 +7,7 @@ const API_URL = 'http://192.168.30.124:8765';  // 后端接口地址，按需修
 // ═══════════════════════════════════════
 //  模拟数据开关（联调时全部改为 false）
 // ═══════════════════════════════════════
-const USE_MOCK_AI = true;         // AI分析：true=内嵌模拟JSON, false=真实POST /api/analyze
+const USE_MOCK_AI = false;         // AI分析：true=内嵌模拟JSON, false=真实POST /api/analyze
 const USE_MOCK_RECOGNIZE = true;  // 照片识别：true=直接载入SAMPLE, false=真实POST /api/recognize
 
 // 模拟 AI 分析返回数据（来自 ai-json-fronten-new1.json — 平胡混色场景）
@@ -1799,13 +1799,22 @@ async function requestAI() {
       renderAIResponse(MOCK_AI_DATA);
     } else {
       const payload = buildRequestPayload();
-      const resp = await fetch(API_URL + '/api/analyze', {
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const formData = new FormData();
+      formData.append('file', blob, 'game_state.json');
+
+      const resp = await fetch(API_URL + '/analyze/file', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: formData
       });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.message || `HTTP ${resp.status}`);
+      }
+      const result = await resp.json();
+      // 后端返回格式: { analysis: {...}, message: "...", status: "success" }
+      const data = result.analysis || result;
       renderAIResponse(data);
     }
     document.getElementById('advice-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
