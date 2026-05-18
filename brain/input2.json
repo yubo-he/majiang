@@ -1,0 +1,82 @@
+{
+  "global": {
+    "game_type": "四川麻将",
+    "notes": "川麻规则：缺一门、血战到底、刮风下雨、不可吃牌。牌型仅限万、筒、索。无风牌、无箭牌。",
+    "analysis_date": "2026-05-16 21:34:52",
+    "image_path": "",
+    "back_up1": "用户手动提问：我该怎么打。请帮我分析一下我的牌型和听牌情况。",
+    "status": "my_hand",
+    "discard_tile": "",
+    "river_tiles": {
+      "all_tiles": [
+        "二万", "二万", "二万", "三万","四万", "五万", "五万", "六万", "六万","六万", "七万", "八万", "万", 
+        "一索","一索","三索","四索","六索", "六索","六索","八索", "一筒", "一筒", "二筒", "二筒", "四筒", "八筒"
+      ]
+    }
+  },
+  "players": {
+    "my_hand": {
+      "dingque": "筒",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [
+          "一索", "一索", "二索","三索","三索", "四索", "五索",  "八索","九索",  "九索", "九索"
+        ],
+        "bright_tiles": ["七索","七索","七索"]
+      }
+    },
+    "left_hand": {
+      "dingque": "万",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [],
+        "bright_tiles": [
+          {
+            "type": "peng",
+            "values": []
+          }
+        ]
+      }
+    },
+    "right_hand": {
+      "dingque": "万",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [],
+        "bright_tiles": ["五筒","五筒","五筒"]
+      }
+    },
+    "across_hand": {
+      "dingque": "筒",
+      "hu_info": {
+        "is_hu": false,
+        "hu_tile": null,
+        "hu_type": null,
+        "provider": null
+      },
+      "hand_tiles": {
+        "total_count": 13,
+        "dark_tiles": [],
+        "bright_tiles": ["一万","一万","一万"]
+      }
+    }
+  }
+}

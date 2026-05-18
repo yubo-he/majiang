@@ -1,0 +1,177 @@
+{
+  "analysis_timestamp": "2026-05-16T21:35:10.123456",
+  "game_stage": "中后期",
+  "turn_type": "my_turn",
+  "hand_analysis": {
+    "suit_distribution": {
+      "万子": 0,
+      "筒子": 5,
+      "索子": 9
+    },
+    "missing_suit": "万子",
+    "missing_suit_status": "已清完",
+    "hand_structure": {
+      "triplets": [],
+      "pairs": [
+        {
+          "tile": "一索",
+          "count": 2
+        },
+        {
+          "tile": "四索",
+          "count": 2
+        },
+        {
+          "tile": "四筒",
+          "count": 2
+        }
+      ],
+      "sequences_potential": [
+        {
+          "tiles": "三四五索",
+          "status": "已成顺",
+          "needs": "无"
+        },
+        {
+          "tiles": "七八九索",
+          "status": "已成顺",
+          "needs": "无"
+        },
+        {
+          "tiles": "七八筒",
+          "status": "搭子",
+          "needs": "六筒/九筒"
+        }
+      ],
+      "isolated_tiles": [
+        {
+          "tile": "三筒",
+          "reason": "邻张四筒为对子，三筒成搭效率低，且为单张"
+        }
+      ]
+    },
+    "total_tiles": 14
+  },
+  "hand_direction": "平胡（混色）",
+  "river_analysis": {
+    "suosu": {
+      "五索": 1,
+      "七索": 2
+    },
+    "tongzi": {
+      "二筒": 3,
+      "五筒": 1,
+      "八筒": 1
+    },
+    "wanzi": {
+      "二万": 3,
+      "四万": 1,
+      "五万": 2,
+      "六万": 2,
+      "七万": 1,
+      "八万": 2,
+      "九万": 4
+    },
+    "key_insights": [
+      "九万已明杠（绝张）",
+      "二筒河内 3 张（剩余 1 张）",
+      "八筒河内 1 张（剩余 3 张）",
+      "三筒河内 0 张（剩余 4 张）"
+    ]
+  },
+  "opponent_info": {
+    "left_hand": {
+      "dingque": "万",
+      "exposed": "六索碰",
+      "threat_level": "高"
+    },
+    "right_hand": {
+      "dingque": "筒",
+      "exposed": "无",
+      "threat_level": "中"
+    },
+    "across_hand": {
+      "dingque": "未知",
+      "exposed": "九万明杠",
+      "threat_level": "无"
+    },
+    "summary": "对家已胡牌出局。下家缺万碰六索，索子需求大；上家缺筒，筒子为安全花色。"
+  },
+  "tenpai_progress": {
+    "current_shanten": "1 向听",
+    "target": "平胡",
+    "efficiency": "高",
+    "blocked_tiles": [
+      "二筒",
+      "九万"
+    ]
+  },
+  "recommendation": {
+    "primary_choice": "打三筒",
+    "secondary_choice": "打八筒",
+    "strategies": [
+      {
+        "strategy_id": 1,
+        "strategy_name": "打三筒 - 效率与安全平衡",
+        "action": "打出三筒",
+        "reasoning": "三筒为孤张（四筒为对子），保留七八筒搭子听牌面更广。上家缺筒，打筒子相对安全（上家无法胡筒子）。下家缺万，可能胡筒子，但三筒未现河，风险可控。",
+        "direction": "平胡速听",
+        "advantages": [
+          "保留七八筒好搭子",
+          "利用上家缺筒规则避险",
+          "手牌结构最优，维持 1 向听"
+        ],
+        "risks": [
+          "三筒为生张，下家可能听牌",
+          "若四筒被碰，手牌结构受损"
+        ],
+        "risk_level": "中",
+        "reward_level": "高",
+        "win_probability": "50%-60%",
+        "expected_value": "高收益中风险"
+      },
+      {
+        "strategy_id": 2,
+        "strategy_name": "打八筒 - 绝对安全优先",
+        "action": "打出八筒",
+        "reasoning": "八筒河内已现 1 张，熟张度高于三筒。若判断下家已听牌，打熟张八筒可降低点炮率。但会破坏七八筒搭子，降低胡牌效率。",
+        "direction": "防守优先",
+        "advantages": [
+          "八筒为熟张，安全性高于三筒",
+          "利用上家缺筒规则避险",
+          "避免打生张三筒的风险"
+        ],
+        "risks": [
+          "破坏七八筒搭子，听牌进度后退",
+          "手牌剩单张七筒，效率降低",
+          "可能错失快速胡牌机会"
+        ],
+        "risk_level": "低",
+        "reward_level": "低",
+        "win_probability": "30%-40%",
+        "expected_value": "低收益低风险"
+      }
+    ],
+    "reasoning": "上家缺筒，打筒子不会点上家胡。下家缺万碰六索，索子危险度极高，严禁打索子。三筒虽为生张，但保留七八筒搭子对听牌至关重要。若求稳可打八筒，但推荐打三筒博取胡牌机会。",
+    "decision_matrix": {
+      "激进型玩家": "打三筒 - 保搭子",
+      "稳健型玩家": "打八筒 - 防点炮",
+      "观察型玩家": "打三筒 - 观察下家反应"
+    }
+  },
+  "strategy_references": [
+    "S-08 清一色雷达：下家碰索子，索子危险度上升",
+    "S-05 断头牌效应：九万明杠，万子相关牌价值归零",
+    "防守原则：缺门花色为绝对安全牌（对上家）",
+    "牌效原则：保留两面搭子，拆除孤张"
+  ],
+  "summary": "本局对家已胡，剩余两家竞争。手牌缺门已清，结构良好（1 向听）。核心策略是利用上家缺筒的安全优势，优先处理筒子孤张。索子因下家碰牌而危险，严禁打出。建议打三筒保留七八筒搭子，争取快速听牌。若下家迹象明显听牌，则改打熟张八筒防守。",
+  "metadata": {
+    "sample_input": "/home/free/dataset/input2/input2.json",
+    "sample_output": "/home/free/dataset/output2/mahjong_test_20260516_213107.json",
+    "real_input": "/home/free/dataset/input2/input.json",
+    "input_strategy": "/home/free/dataset/output/mahjong_strategy.md",
+    "analysis_timestamp": "2026-05-16T21:36:47.952214",
+    "model": "qwen3.5-plus"
+  }
+}

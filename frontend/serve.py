@@ -53,7 +53,7 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 content_length = int(self.headers.get('Content-Length', 0))
                 body = self.rfile.read(content_length)
-                json_path = os.path.join(os.getcwd(), 'frontend_json_backen_sample_blur.json')
+                json_path = os.path.join(os.getcwd(), 'data', 'frontend_json_backen_sample_blur.json')
                 with open(json_path, 'wb') as f:
                     f.write(body)
                 print(f"  [save] 牌局数据已保存 -> {json_path}")
@@ -66,8 +66,8 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
             # 直接使用本地 frontend_json_backen_sample_blur.json 请求 AI 后端
             try:
                 # 使用纯文件名（os.chdir 已在脚本目录），避免 Windows 反斜杠路径问题
-                json_file = 'frontend_json_backen_sample_blur.json'
-                output_file = 'output.json'
+                json_file = 'data/frontend_json_backen_sample_blur.json'
+                output_file = 'data/output.json'
                 if not os.path.exists(json_file):
                     raise FileNotFoundError(f'{json_file} 不存在，请先生成牌局数据')
 
